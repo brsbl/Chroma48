@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChromaBit</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <button id="viewport-settings-button" class="icon-button viewport-settings-button" title="Settings">
+        <img src="icons/settings.png" alt="Settings">
+    </button>
+    <header>
+        <div class="header-content-wrapper">
+            <img src="icons/logo.png" alt="ChromaBit Game Logo" id="header-logo">
+            <h1 id="game-title-text">Chromatrix</h1>
+        </div>
+    </header>
+    <main>
+        <div class="container">
+            <section class="scores-display">
+                <div class="scores-container">
+                    <div class="score-box">Score <div id="score">0</div></div>
+                    <div class="best-box">Best <div id="best-score">0</div></div>
+                </div>
+            </section>
+            <nav class="game-controls">
+                <a class="restart-button" id="restart-button"><img src="icons/refresh-grey.png" alt="New Game" class="button-icon">New Game</a>
+                <a class="pause-button" id="pause-button"><img src="icons/pause.png" alt="Pause" class="button-icon">Pause</a>
+            </nav>
+            <section class="game-board-area">
+                <div class="game-container">
+                    <div class="game-message" id="game-message">
+                        <p></p>
+                        <div class="lower">
+                            <a class="retry-button" id="retry-button">Try Again</a>
+                        </div>
+                    </div>
+                    <div class="grid-container" id="grid-container">
+                        <!-- Grid cells will be added by JavaScript -->
+                    </div>
+                </div>
+            </section>
+            <div class="collapsible-drawer">
+                <button id="toggle-instructions-btn" class="instructions-toggle-button" aria-expanded="false" aria-controls="instructions-content">
+                    <span class="toggle-button-label">Instructions</span> <span class="arrow">+</span>
+                </button>
+                <footer class="game-explanation-footer" id="instructions-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title-text">Instructions</h4>
+                        <button id="close-instructions-modal-btn" class="modal-close-button" title="Close Instructions" aria-label="Close Instructions">&times;</button>
+                    </div>
+                    <div class="game-explanation">
+                        <ul>
+                            <li>➡️ Swipe or use arrow keys to move tiles.</li>
+                            <li>⬇️ After each move, a new tile is added to the board.</li>
+                            <li>🔢 Match tiles of the same number to combine them (and increase your score!)</li>
+                            <li>🚫 The game is over when the board is full.</li>
+                            <li>🏆 See how high you can score!</li>
+                        </ul>
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </main>
+    <script src="script.js"></script>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="settings-modal-title" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="settings-modal-title" class="modal-title-text">Settings</h3>
+                <button id="close-settings-modal-btn" class="modal-close-button" title="Close Settings" aria-label="Close Settings">&times;</button>
+            </div>
+            <div class="modal-body">
+                <section class="settings-section">
+                    <h4>Game Play</h4>
+                    <div class="setting-option">
+                        <input type="radio" id="number-mode-radio" name="gameMode" value="number" checked>
+                        <label for="number-mode-radio">
+                            <span class="setting-label-text">Number Mode</span>
+                            <p class="setting-description">Play with numbers on tiles.</p>
+                        </label>
+                    </div>
+                    <div class="setting-option">
+                        <input type="radio" id="color-mode-radio" name="gameMode" value="color">
+                        <label for="color-mode-radio">
+                            <span class="setting-label-text">Color Mode</span>
+                            <p class="setting-description">No numbers on tiles, match based on color.</p>
+                        </label>
+                    </div>
+                </section>
+                <hr class="settings-divider">
+                <section class="settings-section">
+                    <h4>Color Palette</h4>
+                    <div id="settings-color-palette-grid" class="palette-grid">
+                        <!-- Color swatches will be dynamically inserted here by JavaScript -->
+                    </div>
+                    <input type="color" id="color-picker-input" style="display: none;" aria-hidden="true">
+                </section>
+            </div>
+            <div class="modal-footer">
+                <button id="save-settings-button" class="game-button">Save</button>
+                <button id="cancel-settings-button" class="game-button secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container">
+        <div id="palette-success-message" class="success-message" style="display: none;">
+            <!-- Text content will be set by JavaScript -->
+        </div>
+    </div>
+</body>
+</html> 

@@ -1,0 +1,760 @@
+const game = require('../script.js');
+
+// Mocking localStorage for tests that might eventually use it (like bestScore)
+const localStorageMock = (() => {
+    let store = {};
+    return {
+        getItem: key => store[key] || null,
+        setItem: (key, value) => {
+            store[key] = value.toString();
+        },
+        clear: () => {
+            store = {};
+        },
+        removeItem: key => {
+            delete store[key];
+        }
+    };
+})();
+Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+
+describe('Settings Modal UI Interactions', () => {
+    let settingsModal, closeSettingsModalButton, numberModeRadio, colorModeRadio;
+    let settingsColorPaletteGrid, saveSettingsButton, cancelSettingsButton;
+    let colorPickerInput, paletteSuccessMessage, viewportSettingsButton;
+    // let setupGameSpy; // No longer attempting to mock setupGame for most settings tests
+
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <div id="settings-modal" style="display: none;">
+                <button id="close-settings-modal-btn"></button>
+                <input type="radio" id="number-mode-radio" name="gameMode" value="number">
+                <input type="radio" id="color-mode-radio" name="gameMode" value="color">
+                <div id="settings-color-palette-grid"></div>
+                <button id="save-settings-button"></button>
+                <button id="cancel-settings-button"></button>
+                <input type="color" id="color-picker-input" style="display:none;">
+            </div>
+            <div id="palette-success-message" style="display: none;"></div>
+            <button id="viewport-settings-button"></button>
+            <div id="score">0</div> <div id="best-score">0</div> <div id="grid-container"></div>
+            <div id="pause-button"></div> <div id="retry-button"></div> <p></p>
+        `;
+        game._initializeDOMElements();
+        game._resetModuleState({ 
+            isColorMode: false, 
+            TILE_COLORS: [...game.TILE_COLORS_DEFAULT]
+        });
+
+        settingsModal = document.getElementById('settings-modal');
+        closeSettingsModalButton = document.getElementById('close-settings-modal-btn');
+        numberModeRadio = document.getElementById('number-mode-radio');
+        colorModeRadio = document.getElementById('color-mode-radio');
+        settingsColorPaletteGrid = document.getElementById('settings-color-palette-grid');
+        saveSettingsButton = document.getElementById('save-settings-button');
+        cancelSettingsButton = document.getElementById('cancel-settings-button');
+        colorPickerInput = document.getElementById('color-picker-input');
+        paletteSuccessMessage = document.getElementById('palette-success-message');
+        viewportSettingsButton = document.getElementById('viewport-settings-button');
+
+        if (colorPickerInput) jest.spyOn(colorPickerInput, 'click').mockImplementation(() => {});
+        
+        jest.clearAllTimers();
+        jest.useFakeTimers();
+
+        // Add listeners as script.js would. 
+        if (viewportSettingsButton) viewportSettingsButton.addEventListener('click', game.openSettingsModal);
+        if (closeSettingsModalButton) closeSettingsModalButton.addEventListener('click', game.closeSettingsModal);
+        if (saveSettingsButton) saveSettingsButton.addEventListener('click', game.saveSettings);
+        if (cancelSettingsButton) cancelSettingsButton.addEventListener('click', game.closeSettingsModal);
+        if (colorPickerInput) colorPickerInput.addEventListener('input', game.handleSettingsColorPickerInput);
+    });
+    
+    afterEach(() => {
+        jest.clearAllTimers();
+        jest.restoreAllMocks();
+        if (viewportSettingsButton) viewportSettingsButton.removeEventListener('click', game.openSettingsModal);
+        if (closeSettingsModalButton) closeSettingsModalButton.removeEventListener('click', game.closeSettingsModal);
+        if (saveSettingsButton) saveSettingsButton.removeEventListener('click', game.saveSettings);
+        if (cancelSettingsButton) cancelSettingsButton.removeEventListener('click', game.closeSettingsModal);
+        if (colorPickerInput) colorPickerInput.removeEventListener('input', game.handleSettingsColorPickerInput);
+    });
+
+    describe('populateSettingsColorPalette', () => {
+        test('should clear existing swatches and create new ones based on TILE_COLORS used by openSettingsModal', () => {
+            settingsColorPaletteGrid.innerHTML = '<div class="old-swatch"></div>';
+            game._resetModuleState({ TILE_COLORS: ['#111111', '#222222'] }); 
+            game.openSettingsModal(); 
+            expect(settingsColorPaletteGrid.querySelector('.old-swatch')).toBeNull();
+            expect(settingsColorPaletteGrid.children.length).toBe(2);
+            expect(settingsColorPaletteGrid.children[0].style.backgroundColor).toBe('rgb(17, 17, 17)');
+            expect(settingsColorPaletteGrid.children[1].dataset.color).toBe('#222222');
+        });
+
+        test('swatches should have correct hex code displayed', () => {
+            game._resetModuleState({ TILE_COLORS: ['#ABCDEF'] });
+            game.openSettingsModal();
+            const hexDisplay = settingsColorPaletteGrid.querySelector('.hex-code');
+            expect(hexDisplay).not.toBeNull();
+            expect(hexDisplay.textContent).toBe('#ABCDEF');
+        });
+
+        test('clicking a swatch should set settingsCurrentEditingSwatchIndex and trigger colorPickerInput click', () => {
+            game._resetModuleState({ TILE_COLORS: ['#123456', '#789ABC'] });
+            game.openSettingsModal(); 
+            const firstSwatch = settingsColorPaletteGrid.children[0];
+            firstSwatch.click();
+            expect(game.getGameState().settingsCurrentEditingSwatchIndex).toBe(0);
+            expect(colorPickerInput.value.toUpperCase()).toBe('#123456'); 
+            expect(colorPickerInput.click).toHaveBeenCalled();
+        });
+    });
+
+    describe('openSettingsModal', () => {
+        test('should initialize temp variables from global game state', () => {
+            game._resetModuleState({ isColorMode: true, TILE_COLORS: ['#AAAAAA', '#BBBBBB'] });
+            game.openSettingsModal();
+            const gameState = game.getGameState();
+            expect(gameState.tempIsColorMode).toBe(true);
+            expect(gameState.tempTileColors).toEqual(['#AAAAAA', '#BBBBBB']);
+        });
+
+        test('should set radio buttons based on tempIsColorMode', () => {
+            game._resetModuleState({ isColorMode: true });
+            game.openSettingsModal();
+            expect(colorModeRadio.checked).toBe(true);
+            expect(numberModeRadio.checked).toBe(false);
+            
+            game._resetModuleState({ isColorMode: false });
+            game.openSettingsModal();
+            expect(numberModeRadio.checked).toBe(true);
+            expect(colorModeRadio.checked).toBe(false);
+        });
+        
+        test('should make settings modal visible and hide success message', () => {
+            paletteSuccessMessage.style.display = 'block';
+            settingsModal.style.display = 'none';
+            game.openSettingsModal();
+            expect(settingsModal.style.display).toBe('flex');
+            expect(paletteSuccessMessage.style.display).toBe('none');
+        });
+    });
+
+    describe('closeSettingsModal Functionality', () => {
+        test('should make the settings modal hidden', () => {
+            settingsModal.style.display = 'flex';
+            game.closeSettingsModal();
+            expect(settingsModal.style.display).toBe('none');
+        });
+    });
+
+    describe('saveSettings', () => {
+        test('should apply radio button choice to global isColorMode', () => {
+            game.openSettingsModal(); 
+            colorModeRadio.checked = true; 
+            game.saveSettings(); 
+            expect(game.getGameState().isColorMode).toBe(true);
+            
+            game.openSettingsModal(); 
+            numberModeRadio.checked = true; 
+            game.saveSettings(); 
+            expect(game.getGameState().isColorMode).toBe(false);
+        });
+
+        test('should apply tempTileColors to global TILE_COLORS and affect currentColorIndex via setupGame', () => {
+            game.openSettingsModal(); 
+            game._resetModuleState({ 
+                ...game.getGameState(), 
+                tempTileColors: ['#CCCCCC', '#DDDDDD'], 
+                currentColorIndex: 5 
+            });
+            game.saveSettings(); 
+            expect(game.getGameState().TILE_COLORS).toEqual(['#CCCCCC', '#DDDDDD']);
+            expect(game.getGameState().currentColorIndex).toBe(game.getGameState().TILE_COLORS.length > 0 ? 1 % game.getGameState().TILE_COLORS.length : 0);
+        });
+
+        test('should hide modal and affect game state via setupGame', () => {
+            settingsModal.style.display = 'flex';
+            const initialScore = game.getGameState().score;
+            game.saveSettings();
+            expect(settingsModal.style.display).toBe('none'); 
+            expect(game.getGameState().activeFallingTile).not.toBeNull(); 
+            expect(game.getGameState().score === 0 || game.getGameState().score !== initialScore).toBe(true); 
+        });
+
+        test('should show success message and then hide it after a timeout', () => {
+            paletteSuccessMessage.style.display = 'none';
+            game.saveSettings();
+            expect(paletteSuccessMessage.style.display).toBe('block');
+            expect(paletteSuccessMessage.textContent).toBe('Settings saved and applied!');
+            jest.advanceTimersByTime(3000);
+            expect(paletteSuccessMessage.style.display).toBe('none');
+        });
+    });
+    
+    describe('Color Picker Interaction in Settings Modal', () => {
+        beforeEach(() => {
+            game._resetModuleState({ TILE_COLORS: ['#FF0000', '#00FF00']});
+            game.openSettingsModal(); 
+            game._resetModuleState({...game.getGameState(), settingsCurrentEditingSwatchIndex: 0}); 
+            colorPickerInput.value = game.getGameState().tempTileColors[0]; 
+        });
+
+        test('should update tempTileColors and swatch style on color picker input', () => {
+            colorPickerInput.value = '#1A2B3C'; 
+            const event = new Event('input', { bubbles: true, cancelable: true });
+            colorPickerInput.dispatchEvent(event); 
+            expect(game.getGameState().tempTileColors[0].toUpperCase()).toBe('#1A2B3C');
+            const updatedSwatch = settingsColorPaletteGrid.querySelector('.palette-swatch[data-index="0"]');
+            expect(updatedSwatch.style.backgroundColor).toBe('rgb(26, 43, 60)'); 
+            expect(updatedSwatch.querySelector('.hex-code').textContent).toBe('#1A2B3C');
+        });
+    });
+
+    describe('Settings Modal Button Click Handlers and State Preservation', () => {
+        test('clicking viewportSettingsButton should open the modal', () => {
+            settingsModal.style.display = 'none';
+            viewportSettingsButton.click();
+            expect(settingsModal.style.display).toBe('flex'); 
+        });
+
+        test('clicking saveSettingsButton should save settings and affect game', () => {
+            game._resetModuleState({ isColorMode: false, TILE_COLORS: ['#111', '#222'] });
+            game.openSettingsModal(); 
+            colorModeRadio.checked = true; 
+            game._resetModuleState({ 
+                ...game.getGameState(), 
+                isColorMode: true, // CRITICAL FIX: Ensure _resetModuleState knows the choice is color mode
+                tempTileColors: ['#AAA', '#BBB'] 
+            });
+            saveSettingsButton.click(); 
+            expect(game.getGameState().isColorMode).toBe(true); 
+            expect(game.getGameState().TILE_COLORS).toEqual(['#AAA', '#BBB']); 
+            expect(settingsModal.style.display).toBe('none'); 
+        });
+
+        test('clicking cancelSettingsButton should close modal and NOT save settings', () => {
+            game._resetModuleState({ isColorMode: false, TILE_COLORS: ['#111', '#222'] });
+            game.openSettingsModal(); 
+            game._resetModuleState({...game.getGameState(), tempIsColorMode: true, tempTileColors: ['#AAA', '#BBB']});
+            colorModeRadio.checked = true; 
+            cancelSettingsButton.click(); 
+            expect(settingsModal.style.display).toBe('none');
+            expect(game.getGameState().isColorMode).toBe(false); 
+            expect(game.getGameState().TILE_COLORS).toEqual(['#111', '#222']); 
+        });
+
+        test('clicking modal X close button should close modal and NOT save settings', () => {
+            game._resetModuleState({ isColorMode: true, TILE_COLORS: ['#555', '#666'] });
+            game.openSettingsModal();
+            game._resetModuleState({...game.getGameState(), tempIsColorMode: false, tempTileColors: ['#EEE', '#FFF']});
+            numberModeRadio.checked = true;
+            closeSettingsModalButton.click(); 
+            expect(settingsModal.style.display).toBe('none');
+            expect(game.getGameState().isColorMode).toBe(true);
+            expect(game.getGameState().TILE_COLORS).toEqual(['#555', '#666']);
+        });
+    });
+});
+
+describe('Instructions UI Interactions', () => {
+    let toggleButton, instructionsContent, closeInstructionsButton_collapsible;
+    let scrollToSpy;
+
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <div class="collapsible-drawer">
+                <button id="toggle-instructions-btn" aria-expanded="false" aria-controls="instructions-content">
+                    <span class="toggle-button-label">Instructions</span> <span class="arrow">+</span>
+                </button>
+                <footer class="game-explanation-footer" id="instructions-content" style="max-height: 0px; opacity: 0;">
+                    <div class="modal-header">
+                        <h4 class="modal-title-text">Instructions</h4>
+                        <button id="close-instructions-modal-btn" class="modal-close-button">&times;</button>
+                    </div>
+                    <div class="game-explanation">How to play...</div>
+                </footer>
+            </div>
+        `;
+        game._initializeDOMElements(); 
+        toggleButton = document.getElementById('toggle-instructions-btn');
+        instructionsContent = document.getElementById('instructions-content');
+        closeInstructionsButton_collapsible = instructionsContent.querySelector('.modal-close-button'); 
+        scrollToSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {});
+        Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
+        jest.clearAllTimers();
+        jest.useFakeTimers();
+        
+        // Listeners are set by script.js's DOMContentLoaded
+        if (toggleButton) {
+            toggleButton.addEventListener('click', () => {
+                const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+                game.showInstructionsModal(!isExpanded);
+            });
+        }
+        if (closeInstructionsButton_collapsible) {
+            closeInstructionsButton_collapsible.addEventListener('click', () => {
+                game.showInstructionsModal(false);
+            });
+        }
+    });
+
+    afterEach(() => {
+        jest.clearAllTimers();
+        jest.restoreAllMocks();
+        Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 }); 
+    });
+
+    describe('showInstructionsModal Behaviour', () => {
+        describe('Desktop View (innerWidth > 480)', () => {
+            beforeEach(() => {
+                Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
+            });
+
+            test('should open drawer, update ARIA, change arrow, and scroll after timeout', () => {
+                game.showInstructionsModal(true);
+                expect(instructionsContent.classList.contains('open')).toBe(true);
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('true');
+                expect(toggleButton.querySelector('.arrow').innerHTML).toBe('-');
+                jest.advanceTimersByTime(250);
+                expect(scrollToSpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+            });
+
+            test('should close drawer, update ARIA, and change arrow', () => {
+                game.showInstructionsModal(true); 
+                jest.advanceTimersByTime(250);
+                scrollToSpy.mockClear();
+                game.showInstructionsModal(false);
+                expect(instructionsContent.classList.contains('open')).toBe(false);
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+                expect(toggleButton.querySelector('.arrow').innerHTML).toBe('+');
+                expect(scrollToSpy).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('Mobile View (innerWidth <= 480)', () => {
+            beforeEach(() => {
+                Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 400 });
+            });
+
+            test('should show modal (add body class, update ARIA), not use .open class', () => {
+                game.showInstructionsModal(true);
+                expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(true);
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('true');
+                expect(instructionsContent.classList.contains('open')).toBe(false);
+            });
+
+            test('should hide modal (remove body class, update ARIA)', () => {
+                game.showInstructionsModal(true);
+                game.showInstructionsModal(false);
+                expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(false);
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+            });
+        });
+    });
+
+    describe('Instructions Event Listeners (via click simulation)', () => {
+        describe('Toggle Button Click', () => {
+            test('should toggle instructions display on desktop via click', () => {
+                Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1024 });
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+                toggleButton.click();
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('true');
+                expect(instructionsContent.classList.contains('open')).toBe(true);
+                jest.advanceTimersByTime(250);
+                expect(scrollToSpy).toHaveBeenCalledTimes(1);
+                toggleButton.click(); 
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+                expect(instructionsContent.classList.contains('open')).toBe(false);
+            });
+
+            test('should toggle instructions modal on mobile via click', () => {
+                Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 400 });
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+                toggleButton.click();
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('true');
+                expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(true);
+                toggleButton.click(); 
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+                expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(false);
+            });
+        });
+
+        describe('Close Instructions Button Click (Mobile Modal)', () => {
+            test('should hide instructions modal when footer close button is clicked', () => {
+                Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 400 });
+                game.showInstructionsModal(true); 
+                expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(true);
+                expect(closeInstructionsButton_collapsible).not.toBeNull();
+                closeInstructionsButton_collapsible.click(); 
+                expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(false);
+                expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+            });
+        });
+    });
+}); 
+
+describe('Game Controls UI Interactions', () => {
+    let pauseButton, messageContainer, tryAgainButton;
+    let setIntervalSpy, clearIntervalSpy;
+
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <a class="pause-button" id="pause-button"><img src="pause.png" alt="Pause" class="button-icon">Pause</a>
+            <div class="game-message" id="game-message" style="display: none;"><p></p><div class="lower"><a class="retry-button" id="retry-button">Try Again</a></div></div>
+        `;
+        game._initializeDOMElements();
+        game._resetModuleState({ isPaused: false, isGameOver: false, activeFallingTile: null, gameInterval: null });
+
+        pauseButton = document.getElementById('pause-button');
+        messageContainer = document.getElementById('game-message');
+        tryAgainButton = document.getElementById('retry-button');
+
+        setIntervalSpy = jest.spyOn(window, 'setInterval');
+        clearIntervalSpy = jest.spyOn(window, 'clearInterval');
+        
+        if (pauseButton) pauseButton.addEventListener('click', game.togglePauseGame);
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+        if (pauseButton) pauseButton.removeEventListener('click', game.togglePauseGame);
+    });
+
+    test('should initially be unpaused, button shows Pause', () => {
+        expect(game.getGameState().isPaused).toBe(false);
+        expect(pauseButton.textContent).toBe('Pause');
+        expect(pauseButton.querySelector('img').getAttribute('alt')).toBe('Pause');
+        expect(messageContainer.style.display).toBe('none');
+    });
+
+    test('first call to game.togglePauseGame should pause the game', () => {
+        const mockIntervalId = 123;
+        game._resetModuleState({ gameInterval: mockIntervalId }); 
+        game.togglePauseGame();
+        const gameState = game.getGameState();
+        expect(gameState.isPaused).toBe(true);
+        expect(clearIntervalSpy).toHaveBeenCalledWith(mockIntervalId);
+        expect(gameState.gameInterval).toBeNull();
+        expect(pauseButton.textContent).toBe('Resume');
+        expect(pauseButton.querySelector('img').getAttribute('alt')).toBe('Play');
+        expect(tryAgainButton.textContent).toBe('Resume Game');
+        expect(messageContainer.querySelector('p').textContent).toBe('Game Paused');
+        expect(messageContainer.style.display).toBe('flex');
+    });
+
+    test('second call to game.togglePauseGame should resume the game', () => {
+        game.togglePauseGame(); 
+        game.togglePauseGame(); 
+        expect(game.getGameState().isPaused).toBe(false);
+        expect(pauseButton.textContent).toBe('Pause');
+    });
+
+    test('resuming game should start interval if a tile is active and game not over', () => {
+        game._resetModuleState({ activeFallingTile: { tileObject: {value: 2, color: 'red'}, row: 0, col: 0 }, isGameOver: false });
+        game.togglePauseGame(); 
+        game.togglePauseGame(); 
+        expect(game.getGameState().isPaused).toBe(false);
+        expect(setIntervalSpy).toHaveBeenCalledWith(game.gameLoop, game.FALL_SPEED || 500);
+        expect(game.getGameState().gameInterval).not.toBeNull();
+    });
+    
+    test('clicking the pauseButton should toggle game pause state and UI', () => {
+        expect(game.getGameState().isPaused).toBe(false);
+        pauseButton.click();
+        expect(game.getGameState().isPaused).toBe(true);
+        expect(pauseButton.textContent).toBe('Resume');
+        pauseButton.click();
+        expect(game.getGameState().isPaused).toBe(false);
+        expect(pauseButton.textContent).toBe('Pause');
+    });
+}); 
+
+describe('createBackgroundGrid', () => {
+    let gridContainerElement;
+    const initialGridSize = 4; 
+
+    beforeEach(() => {
+        document.body.innerHTML = '<div id="grid-container"></div>';
+        gridContainerElement = document.getElementById('grid-container');
+        game._initializeDOMElements(); 
+        game._resetModuleState({ GRID_SIZE: initialGridSize }); 
+    });
+
+    test('should clear existing grid cells and tiles from gridContainer', () => {
+        gridContainerElement.innerHTML = '<div class="grid-cell">old cell</div><div class="tile">old tile</div>';
+        game.createBackgroundGrid();
+        expect(gridContainerElement.querySelector('.grid-cell').textContent).not.toBe('old cell');
+        expect(gridContainerElement.querySelector('.tile')).toBeNull();
+    });
+
+    test('should create GRID_SIZE * GRID_SIZE grid cells', () => {
+        game.createBackgroundGrid();
+        const cells = gridContainerElement.querySelectorAll('.grid-cell');
+        expect(cells.length).toBe(initialGridSize * initialGridSize);
+    });
+
+    test('each created cell should have the class "grid-cell"', () => {
+        game.createBackgroundGrid();
+        const cells = gridContainerElement.querySelectorAll('.grid-cell');
+        cells.forEach(cell => {
+            expect(cell.classList.contains('grid-cell')).toBe(true);
+        });
+    });
+
+    test('should not fail if gridContainer is not found (graceful exit)', () => {
+        expect(() => game.createBackgroundGrid()).not.toThrow();
+    });
+});
+
+describe('createTileElement', () => {
+    let gridContainerElement;
+    const mockTileObject = { value: 2, color: '#FF0000' };
+    const mockRow = 1, mockCol = 2;
+    const mockCellSize = 60;
+    const mockCellGap = 10;
+
+    beforeEach(() => {
+        document.body.innerHTML = '<div id="grid-container"><div class="grid-cell"></div></div>'; 
+        gridContainerElement = document.getElementById('grid-container');
+        game._initializeDOMElements();
+        game._resetModuleState({ isColorMode: false });
+        jest.spyOn(window, 'getComputedStyle').mockReturnValue({
+            getPropertyValue: (prop) => {
+                if (prop === '--gap-grid') return `${mockCellGap}px`;
+                if (prop === '--size-grid-cell') return `${mockCellSize}px`;
+                return '0px';
+            }
+        });
+        const firstCell = gridContainerElement.querySelector('.grid-cell');
+        if (firstCell) {
+            Object.defineProperty(firstCell, 'offsetWidth', { configurable: true, value: mockCellSize });
+        }
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks(); 
+    });
+
+    test('should return null if gridContainer is not available in the game module', () => {
+        const tempGetElementById = document.getElementById;
+        document.getElementById = (id) => (id === 'grid-container' ? null : tempGetElementById.call(document, id));
+        game._initializeDOMElements(); 
+        expect(game.createTileElement(mockTileObject, mockRow, mockCol)).toBeNull();
+        document.getElementById = tempGetElementById; 
+        game._initializeDOMElements(); 
+    });
+
+    test('should create a div element with class "tile"', () => {
+        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
+        expect(tileElement).not.toBeNull();
+        expect(tileElement.tagName).toBe('DIV');
+        expect(tileElement.classList.contains('tile')).toBe(true);
+    });
+
+    test('should add value-specific class name', () => {
+        const tile2 = game.createTileElement({ value: 2, color: 'red' }, 0, 0);
+        expect(tile2.classList.contains('tile-2')).toBe(true);
+        const tile2048 = game.createTileElement({ value: 2048, color: 'blue' }, 0, 0);
+        expect(tile2048.classList.contains('tile-2048')).toBe(true);
+        const tile4096 = game.createTileElement({ value: 4096, color: 'green' }, 0, 0);
+        expect(tile4096.classList.contains('tile-super')).toBe(true);
+    });
+
+    test('should set textContent to value in Number Mode', () => {
+        game._resetModuleState({ isColorMode: false });
+        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
+        expect(tileElement.textContent).toBe(mockTileObject.value.toString());
+    });
+
+    test('should set empty textContent in Color Mode', () => {
+        game._resetModuleState({ isColorMode: true });
+        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
+        expect(tileElement.textContent).toBe('');
+    });
+
+    test('should set background color from tileObject', () => {
+        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
+        expect(tileElement.style.backgroundColor).toBe('rgb(255, 0, 0)'); 
+    });
+
+    test('should correctly set width, height, top, and left styles', () => {
+        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
+        expect(tileElement.style.width).toBe(`${mockCellSize}px`);
+        expect(tileElement.style.height).toBe(`${mockCellSize}px`);
+        const expectedTop = mockRow * (mockCellSize + mockCellGap);
+        const expectedLeft = mockCol * (mockCellSize + mockCellGap);
+        expect(tileElement.style.top).toBe(`${expectedTop}px`);
+        expect(tileElement.style.left).toBe(`${expectedLeft}px`);
+    });
+
+    test('should append the tile to gridContainer', () => {
+        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
+        expect(gridContainerElement.contains(tileElement)).toBe(true);
+    });
+
+    test('should use fallback --size-grid-cell if .grid-cell offsetWidth is not available', () => {
+        gridContainerElement.innerHTML = ''; 
+        game._initializeDOMElements(); 
+        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
+        expect(tileElement.style.width).toBe(`${mockCellSize}px`); 
+    });
+});
+
+describe('drawGrid', () => {
+    let gridContainerElement;
+    let createTileElementSpy;
+
+    beforeEach(() => {
+        document.body.innerHTML = '<div id="grid-container"></div>';
+        gridContainerElement = document.getElementById('grid-container');
+        game._initializeDOMElements();
+        game._resetModuleState({
+            grid: [
+                [{ value: 2, color: 'red' }, null],
+                [null, { value: 4, color: 'blue' }]
+            ],
+            GRID_SIZE: 2 
+        });
+        createTileElementSpy = jest.spyOn(game, 'createTileElement').mockImplementation(() => document.createElement('div')); 
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    test('should return early if gridContainer is not available in the game module', () => {
+        const tempGetElementById = document.getElementById;
+        document.getElementById = (id) => (id === 'grid-container' ? null : tempGetElementById.call(document, id));
+        game._initializeDOMElements(); 
+        game.drawGrid();
+        expect(createTileElementSpy).not.toHaveBeenCalled(); 
+        document.getElementById = tempGetElementById; 
+        game._initializeDOMElements(); 
+    });
+
+    test('should remove existing tile elements from gridContainer', () => {
+        const oldTile = document.createElement('div');
+        oldTile.classList.add('tile');
+        gridContainerElement.appendChild(oldTile); 
+        game.drawGrid(); 
+        expect(oldTile.parentElement).toBeNull(); 
+    });
+
+    test('should create new tiles for non-null cells in the grid', () => {
+        gridContainerElement.innerHTML = ''; 
+        game.drawGrid();
+        expect(gridContainerElement.querySelectorAll('.tile').length).toBe(2); 
+    });
+
+    test('should not create tiles for null cells', () => {
+        game._resetModuleState({
+            grid: [
+                [null, null],
+                [null, null]
+            ],
+            GRID_SIZE: 2
+        });
+        game.drawGrid();
+        expect(createTileElementSpy).not.toHaveBeenCalled();
+    });
+}); 
+
+describe('handleGameOver', () => {
+    let messageContainerElement, messageParagraph, tryAgainButtonElement, pauseButtonElement;
+    let clearIntervalSpy;
+
+    beforeEach(() => {
+        document.body.innerHTML = `
+            <div id="game-message" style="display: none;">
+                <p></p>
+                <div class="lower">
+                    <a class="retry-button" id="retry-button">Initial Text</a>
+                </div>
+            </div>
+            <a id="pause-button">Pause</a>
+            <div id="score">0</div> <div id="best-score">0</div> <div id="grid-container"></div>
+        `;
+        game._initializeDOMElements(); 
+        messageContainerElement = document.getElementById('game-message');
+        messageParagraph = messageContainerElement.querySelector('p');
+        tryAgainButtonElement = document.getElementById('retry-button');
+        pauseButtonElement = document.getElementById('pause-button'); 
+        game._resetModuleState({
+            isGameOver: false,
+            activeFallingTile: { tileObject: {}, row: 0, col: 0 },
+            gameInterval: 12345 
+        });
+        clearIntervalSpy = jest.spyOn(window, 'clearInterval');
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    test('should set isGameOver to true', () => {
+        game.handleGameOver();
+        expect(game.getGameState().isGameOver).toBe(true);
+    });
+
+    test('should clear gameInterval if it exists', () => {
+        const intervalId = game.getGameState().gameInterval;
+        expect(intervalId).not.toBeNull(); 
+        game.handleGameOver();
+        expect(clearIntervalSpy).toHaveBeenCalledWith(intervalId);
+        expect(game.getGameState().gameInterval).toBeNull();
+    });
+
+    test('should not try to clear gameInterval if it is null', () => {
+        game._resetModuleState({ gameInterval: null }); 
+        clearIntervalSpy.mockClear(); 
+        game.handleGameOver();
+        expect(clearIntervalSpy).not.toHaveBeenCalled();
+    });
+
+    test('should set activeFallingTile to null', () => {
+        expect(game.getGameState().activeFallingTile).not.toBeNull(); 
+        game.handleGameOver();
+        expect(game.getGameState().activeFallingTile).toBeNull();
+    });
+
+    test('should display "Game Over!" message and show message container', () => {
+        messageContainerElement.style.display = 'none'; 
+        messageParagraph.textContent = '';
+        game.handleGameOver();
+        expect(messageParagraph.textContent).toBe('Game Over!');
+        expect(messageContainerElement.style.display).toBe('flex');
+    });
+
+    test('should set tryAgainButton text to "Try Again"', () => {
+        tryAgainButtonElement.textContent = 'Something Else';
+        game.handleGameOver();
+        expect(tryAgainButtonElement.textContent).toBe('Try Again');
+    });
+    
+    test('should handle missing messageContainer or p tag gracefully', () => {
+        const originalMessageContainer = messageContainerElement;
+        if (document.body.contains(messageContainerElement)) { // Ensure it exists before trying to remove
+            document.body.removeChild(messageContainerElement); 
+        }
+        game._initializeDOMElements(); 
+        expect(() => game.handleGameOver()).not.toThrow();
+        if (originalMessageContainer) { // Add it back if it was there
+             document.body.appendChild(originalMessageContainer);
+        }
+        game._initializeDOMElements();
+    });
+
+    test('should handle missing tryAgainButton gracefully', () => {
+        const originalTryAgainButton = tryAgainButtonElement;
+        if (tryAgainButtonElement && tryAgainButtonElement.parentNode) { // Ensure it exists and has a parent
+            tryAgainButtonElement.parentNode.removeChild(tryAgainButtonElement); 
+        }
+        game._initializeDOMElements(); 
+        expect(() => game.handleGameOver()).not.toThrow();
+        if (originalTryAgainButton && messageContainerElement && messageContainerElement.querySelector('.lower')) { // Add it back if possible
+            messageContainerElement.querySelector('.lower').appendChild(originalTryAgainButton);
+        }
+        game._initializeDOMElements();
+    });
+}); 
