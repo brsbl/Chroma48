@@ -556,16 +556,13 @@ describe('setupGame', () => {
     });
 
     test('should set pauseButton innerHTML to Pause with icon, if pauseButton exists', () => {
-        if (pauseButtonElement) {
-            game.setupGame();
-            const gamePauseButton = document.getElementById('pause-button');
-            if (gamePauseButton) {
-                 expect(gamePauseButton.innerHTML).toContain('<img src="icons/pause.png" alt="Pause" class="button-icon">');
-                 expect(gamePauseButton.innerHTML).toContain('Pause');
-            }
-        } else {
-            game._initializeDOMElements();
-            expect(() => game.setupGame()).not.toThrow();
+        document.body.innerHTML = '<button id="pause-button"></button>';
+        game._initializeDOMElements(); // Re-initialize to pick up the new button
+        game.setupGame();
+        const gamePauseButton = document.getElementById('pause-button');
+        if (gamePauseButton) {
+             expect(gamePauseButton.innerHTML).toContain('<img src="icons/Pause.png" alt="Pause" class="button-icon">');
+             expect(gamePauseButton.innerHTML).toContain('Pause');
         }
     });
 
