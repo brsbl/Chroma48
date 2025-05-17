@@ -718,7 +718,7 @@ body.instructions-modal-mode-active .game-explanation-footer #close-instructions
 }
 
 .game-button.secondary:hover {
-    background-color: var(--color-button-pause-hover-bg);
+    background-color: #C0C0C0; /* Slightly darker gray for secondary button hover */
 }
 
 /* Instructions content in modal */
@@ -1023,5 +1023,40 @@ body.instructions-modal-mode-active .game-explanation-footer > .modal-header {
 }
 
 .game-button.secondary:hover {
-    background-color: var(--color-button-pause-hover-bg);
+    background-color: #C0C0C0; /* Slightly darker gray for secondary button hover */
+}
+
+/* New Best Score Emoji Styles */
+.new-best-score-indicator {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: 1em; /* Adjust as needed relative to surrounding text */
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.new-best-score-indicator.animate {
+    opacity: 1;
+    transform: scale(1);
+    animation: tada-animation 0.8s ease-out;
+}
+
+@keyframes tada-animation {
+    0% {
+        transform: scale(1);
+    }
+    10%, 20% {
+        transform: scale(0.9) rotate(-3deg);
+    }
+    30%, 50%, 70%, 90% {
+        transform: scale(1.1) rotate(3deg);
+    }
+    40%, 60%, 80% {
+        transform: scale(1.1) rotate(-3deg);
+    }
+    100% {
+        transform: scale(1) rotate(0);
+        opacity: 1; /* Ensure it's visible at the end */
+    }
 }

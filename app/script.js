@@ -27,7 +27,7 @@ let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContain
     settingsColorPaletteGrid, saveSettingsButton, cancelSettingsButton,
     colorPickerInput, paletteSuccessMessage,
     toggleButton, instructionsContent, collapsibleDrawer, 
-    closeInstructionsButton_collapsible;
+    closeInstructionsButton_collapsible, newBestScoreEmoji;
 
 let tempIsColorMode = false;
 let tempTileColors = [...TILE_COLORS_DEFAULT];
@@ -167,6 +167,13 @@ function updateScore(newPoints) {
         bestScore = score;
         updateBestScore();
         localStorage.setItem('bestScore', bestScore.toString());
+        if (newBestScoreEmoji) {
+            newBestScoreEmoji.classList.add('animate');
+            // Remove the class after the animation completes so it can be re-triggered
+            setTimeout(() => {
+                newBestScoreEmoji.classList.remove('animate');
+            }, 800); // Duration of the animation in ms
+        }
     }
 }
 
@@ -721,10 +728,11 @@ function handleTouchEnd(event) {
 
 // Function to initialize DOM element variables
 function _initializeDOMElements() {
-    gameContainer = document.getElementById('game-container');
+    gameContainer = document.querySelector('.game-container');
     gridContainer = document.getElementById('grid-container');
     scoreDisplay = document.getElementById('score');
     bestScoreDisplay = document.getElementById('best-score');
+    newBestScoreEmoji = document.getElementById('new-best-score-emoji');
     messageContainer = document.getElementById('game-message');
     restartButton = document.getElementById('restart-button');
     tryAgainButton = document.getElementById('retry-button');
