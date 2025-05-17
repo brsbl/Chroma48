@@ -489,6 +489,20 @@ function handleUserKeyPress(event) {
         return;
     }
 
+    // Local debug: Command/Ctrl + E to trigger new best score animation
+    if ((event.metaKey || event.ctrlKey) && event.key === 'e') {
+        event.preventDefault(); // Prevent any default browser action for Ctrl/Cmd+E
+        if (newBestScoreEmoji) {
+            newBestScoreEmoji.classList.remove('animate'); // Remove first to reset if already animating
+            void newBestScoreEmoji.offsetWidth; // Trigger reflow to restart animation if already applied
+            newBestScoreEmoji.classList.add('animate');
+            setTimeout(() => {
+                newBestScoreEmoji.classList.remove('animate');
+            }, 800); // Duration of the animation in ms
+        }
+        return; // Stop further processing for this debug command
+    }
+
     // If a modal is active, or game is over/paused, ignore game key presses
     if (isModalActive || isGameOver || isPaused) {
         return;
