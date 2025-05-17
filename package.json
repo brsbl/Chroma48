@@ -1,7 +1,7 @@
 {
-  "name": "2048tetris",
+  "name": "chroma48",
   "version": "1.0.0",
-  "description": "## Overview",
+  "description": "A 2048 Tetris-like game called Chroma48",
   "main": "script.js",
   "directories": {
     "test": "tests"

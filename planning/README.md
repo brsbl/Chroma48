@@ -1,8 +1,8 @@
-# ChromaBit (2048 Tetris)
+# Chroma48 (A 2048 Tetris-like Game)
 
 ## Overview
 
-ChromaBit is a web-based puzzle game that creatively combines the mechanics of the classic 2048 game with a Tetris-like tile-falling dynamic. Players aim to merge tiles of the same number (or color, depending on the selected mode) to achieve the highest possible score before the game board fills up. The game is designed to be responsive and playable across various screen sizes, offering customizable color palettes and game modes.
+Chroma48 is a web-based puzzle game that creatively combines the mechanics of the classic 2048 game with a Tetris-like tile-falling dynamic. Players aim to merge tiles of the same number (or color, depending on the selected mode) to achieve the highest possible score before the game board fills up. The game is designed to be responsive and playable across various screen sizes, offering customizable color palettes and game modes.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ The application is built using standard web technologies: HTML, CSS, and JavaScr
 
 The HTML file lays out the fundamental structure of the game interface. Key components include:
 
-*   **Header:** Displays the game logo and title ("ChromaBit").
+*   **Header:** Displays the game logo and title ("Chroma48").
 *   **Main Game Area:**
     *   **Scores Display:** Shows the current score and the best score.
     *   **Game Controls:** Contains buttons for "New Game" and "Pause/Resume."
@@ -146,7 +146,7 @@ Accessed via the gear icon at the top right of the viewport.
 *   Touch controls are provided for mobile devices.
 
 ---
-This README provides a good overview.
+This README provides a good overview for Chroma48.
 
 Next, **Step 3: Write Unit Tests using Jest**.
 This is the most complex part. I'll start by creating the test file and focusing on the pure utility functions (color manipulation) first, as they don't require DOM mocking. Then I'll move to functions with more dependencies.

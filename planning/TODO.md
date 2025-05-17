@@ -1,16 +1,15 @@
 ### Beta
-- add an animation when tiles merge
-
-- add a :tada: emoji to the score box when the user achieves a new high score
+- add a :tada: emoji animation to the score box when the user achieves a new high score
 - add a success message on the game over screen when a user achieves a new high score
 
-- update name of project to Chromatrix
+- update name of project to Chroma48
 - add a beta tag next to the game title in the header
 
 
 ### GA
-- Add more animations (eg multiple merges at once triggers bigger pop; multiple in a row triggers fire emoji constantly; breaking high schore triggers raining tada emojis)
+- Add more animations (eg multiple merges at once triggers bigger pop; multiple in a row triggers fire emoji constantly; number of unique colors generated)
 - Finalize color and text styles and logo
+- add ablility to share final score after game over
 - Update game paused text to monospace
 - Consider implementing a custom JavaScript color picker library to have full control over appearance and behavior, and to bypass potential browser bugs with native picker + input field interactions.
 - split up script.js into multiple files and make sure all references are updated accordingly
