@@ -573,14 +573,14 @@ const gameApi = {
                 clearInterval(gameInterval);
                 gameInterval = null;
             }
-            if (pauseButton) pauseButton.innerHTML = '<img src="icons/play.png" alt="Play" class="button-icon">Resume';
+            if (pauseButton) pauseButton.innerHTML = '<img src="icons/Play.png" alt="Play" class="button-icon">Resume';
             if (tryAgainButton) tryAgainButton.style.display = 'none';
             if (messageContainer && messageContainer.querySelector('p')) {
                 messageContainer.querySelector('p').textContent = 'Game Paused';
                 messageContainer.style.display = 'flex';
             }
         } else {
-            if (pauseButton) pauseButton.innerHTML = '<img src="icons/pause.png" alt="Pause" class="button-icon">Pause';
+            if (pauseButton) pauseButton.innerHTML = '<img src="icons/Pause.png" alt="Pause" class="button-icon">Pause';
             if (tryAgainButton) tryAgainButton.style.display = 'flex';
             if (messageContainer) {
                  messageContainer.style.display = 'none';
