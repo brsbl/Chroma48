@@ -1,8 +1,3 @@
-### Beta
-
-- add a beta tag next to the game title in the header
-
-
 ### GA
 - Add more animations (eg multiple merges at once triggers bigger pop; multiple in a row triggers fire emoji constantly; number of unique colors generated)
 - Finalize color and text styles and logo
