@@ -154,6 +154,17 @@ function createBackgroundGrid() {
     }
 }
 
+// Helper function for a standard confetti effect
+function triggerConfettiEffect() {
+    if (jsConfettiInstance) {
+        jsConfettiInstance.addConfetti({
+            emojis: ['🎉', '🌟', '💖'], // Standard emojis
+            confettiNumber: 50,        // Standard number
+            emojiSize: 80              // Standard size
+        });
+    }
+}
+
 function updateScore(newPoints) {
     if (newPoints === 0 && score !== 0) {
          score = 0;
@@ -168,13 +179,7 @@ function updateScore(newPoints) {
         bestScore = score;
         updateBestScore();
         localStorage.setItem('bestScore', bestScore.toString());
-        if (jsConfettiInstance) {
-            jsConfettiInstance.addConfetti({
-                emojis: ['🎉', '🌟', '💖'],
-                confettiNumber: 50,
-                emojiSize: 80
-            });
-        }
+        triggerConfettiEffect(); // Use the standard confetti effect
     }
 }
 
@@ -493,13 +498,7 @@ function handleUserKeyPress(event) {
     // Local debug: Command/Ctrl + E to trigger new best score animation
     if ((event.metaKey || event.ctrlKey) && event.key === 'e') {
         event.preventDefault(); // Prevent any default browser action for Ctrl/Cmd+E
-        if (jsConfettiInstance) {
-            jsConfettiInstance.addConfetti({
-                emojis: ['🎉', '✨'],
-                emojiSize: 100,
-                confettiNumber: 40,
-            });
-        }
+        triggerConfettiEffect(); // Use the standard confetti effect
         return; // Stop further processing for this debug command
     }
 
