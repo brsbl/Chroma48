@@ -21,6 +21,7 @@ let currentColorIndex = 0;
 let isColorMode = false;
 let isModalActive = false;
 let jsConfettiInstance = null; // Added for js-confetti
+let newBestScoreAchievedThisGame = false; // New flag
 
 // DOM Element Variables - to be assigned in _initializeDOMElements
 let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContainer,
@@ -132,6 +133,9 @@ const gameApi = {
         isGameOver = false; 
         score = 0;
         this.updateScore(0); 
+        if (bestScoreDisplay) bestScoreDisplay.classList.remove('best-score-glow');
+        if (scoreDisplay) scoreDisplay.classList.remove('current-score-glow');
+        newBestScoreAchievedThisGame = false; // Reset flag
         grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
         
         if (gridContainer) {
@@ -187,6 +191,8 @@ const gameApi = {
             this.updateBestScore();
             localStorage.setItem('bestScore', bestScore.toString());
             this.triggerConfettiEffect();
+            if (bestScoreDisplay) bestScoreDisplay.classList.add('best-score-glow');
+            newBestScoreAchievedThisGame = true; // Set flag
         }
     },
 
@@ -200,11 +206,26 @@ const gameApi = {
             clearInterval(gameInterval);
             gameInterval = null;
         }
-        activeFallingTile = null; 
+        this.updateGameMessageVisibility();
+
         if (messageContainer) {
-            if (messageContainer.querySelector('p')) messageContainer.querySelector('p').textContent = 'Game Over!';
-            messageContainer.style.display = 'flex';
+            const messageParagraph = messageContainer.querySelector('p');
+            if (messageParagraph) {
+                let gameOverHTML = "Game Over!";
+
+                // Display the new high score message if the flag is set
+                if (newBestScoreAchievedThisGame) {
+                    // Ensure the best score glow is active if we are showing the new high score message
+                    if (bestScoreDisplay && !bestScoreDisplay.classList.contains('best-score-glow')) {
+                        bestScoreDisplay.classList.add('best-score-glow');
+                    }
+                    gameOverHTML += '<br><span class="new-high-score-emphasis">New High Score! 🎉</span>';
+                }
+                messageParagraph.innerHTML = gameOverHTML;
+            }
         }
+
+        activeFallingTile = null;
         if (tryAgainButton) tryAgainButton.textContent = 'Try Again';
     },
 
@@ -238,7 +259,7 @@ const gameApi = {
         tile.style.top = `${top}px`;
         tile.style.left = `${left}px`;
         
-        console.log('Creating tile:', JSON.stringify(tileObject), 'at row:', row, 'col:', col, 'Has merge flag?', !!tileObject.isNewlyMerged);
+        // console.log('Creating tile:', JSON.stringify(tileObject), 'at row:', row, 'col:', col, 'Has merge flag?', !!tileObject.isNewlyMerged);
 
         if (tileObject.isNewlyMerged) {
             tile.classList.add('tile-just-merged');
@@ -496,6 +517,13 @@ const gameApi = {
         if ((event.metaKey || event.ctrlKey) && event.key === 'e') {
             event.preventDefault(); 
             this.triggerConfettiEffect(); 
+
+            // Score manipulation removed based on user feedback.
+            // Visual effects and flag setting remain.
+            
+            if (bestScoreDisplay) bestScoreDisplay.classList.add('best-score-glow'); 
+            if (scoreDisplay) scoreDisplay.classList.add('current-score-glow');
+            newBestScoreAchievedThisGame = true; // Set flag for debug trigger
             return; 
         }
 
@@ -858,7 +886,13 @@ const gameApi = {
     },
     // Constants for tests (now part of gameApi)
     GRID_SIZE_DEFAULT: 4,
-    TILE_COLORS_DEFAULT_GETTER: () => [...TILE_COLORS_DEFAULT] // Use a function to return a copy
+    TILE_COLORS_DEFAULT_GETTER: () => [...TILE_COLORS_DEFAULT],
+
+    updateGameMessageVisibility: function() {
+        if (messageContainer) {
+            messageContainer.style.display = 'flex';
+        }
+    }
 };
 // --- End gameApi Object Definition ---
 

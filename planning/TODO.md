@@ -1,8 +1,5 @@
 ### Beta
-- add a :tada: emoji animation to the score box when the user achieves a new high score
-- add a success message on the game over screen when a user achieves a new high score
 
-- update name of project to Chroma48
 - add a beta tag next to the game title in the header
 
 

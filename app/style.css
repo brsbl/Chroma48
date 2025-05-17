@@ -29,8 +29,8 @@ html {
     --color-overlay-text-backdrop: rgba(0, 0, 0, 0.5); /* New */
 
     /* Colors - Text */
-    --color-text-base: #908877; /* New base text color */
-    --color-text-score-label: #aea592;
+    --color-text-base: #696762; /* New base text color */
+    --color-text-score-label: #a19987;
     --color-text-score-number: #ffffff;
     --color-text-button-light: #f9f6f2;
     --color-text-button-dark: #979797; /* For pause button */
@@ -86,7 +86,7 @@ body {
     padding: var(--padding-container);
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     min-height: 100vh;
     text-align: center;
@@ -179,6 +179,14 @@ main {
     white-space: nowrap; /* Prevent wrapping of the score */
     overflow: hidden;    /* Hide overflow */
     text-overflow: ellipsis; /* Add ellipsis if score is too long */
+}
+
+#best-score.best-score-glow,
+#score.current-score-glow {
+    text-shadow: 
+        0 0 7px rgba(255, 255, 255, 0.698),   /* Brighter inner white glow */
+        0 0 15px rgb(201, 216, 141),  /* Brighter green glow */
+        0 0 25px rgb(136, 185, 131);  /* Brighter green glow */
 }
 
 /* Game Controls Area (formerly .above-game) */
@@ -385,6 +393,12 @@ main {
 .game-message .lower {
     display: flex;
     justify-content: center;
+}
+
+.new-high-score-emphasis {
+    font-weight: var(--font-weight-bold);
+    display: block; /* Ensures the <br> before it effectively creates a new line */
+    margin-top: 8px; /* Adds a little space above it */
 }
 
 /* Game Explanation Footer */
@@ -922,7 +936,7 @@ body.instructions-modal-mode-active .game-explanation-footer > .modal-header {
 .viewport-settings-button {
     position: fixed;
     top: 15px;
-    right: max(var(--padding-container), calc((100vw - 500px) / 2));
+    right: calc(max(var(--padding-container), calc((100vw - 500px) / 2)) + 10px);
     padding: 0;
     background-color: transparent;
     border: none;
@@ -1029,3 +1043,16 @@ body.instructions-modal-mode-active .game-explanation-footer > .modal-header {
 }
 
 /* Old emoji animation styles removed */
+
+.beta-pill {
+    font-family: var(--font-family-monospace);
+    font-size: 12px;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-base);
+    background-color: var(--color-background-scorebox);
+    padding: 4px 8px;
+    border-radius: 25px;
+    margin-left: 4px; /* Space between title and pill */
+    line-height: 1; /* Ensure consistent vertical alignment */
+    text-transform: uppercase;
+}
