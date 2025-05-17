@@ -1,3 +1,7 @@
+const { TextEncoder, TextDecoder } = require('util');
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+
 const game = require('../app/script.js');
 
 // Mocking localStorage for tests that might eventually use it (like bestScore)
@@ -1194,5 +1198,37 @@ describe('Accessibility (ARIA Labels)', () => {
         expect(modal.getAttribute('role')).toBe('dialog');
         expect(modal.getAttribute('aria-labelledby')).toBe('settings-modal-title');
         expect(modal.getAttribute('aria-modal')).toBe('true');
+    });
+}); 
+
+describe('Vercel Analytics Integration', () => {
+    let headElement;
+
+    beforeAll(() => {
+        // Since app/index.html is static, we can read its content once
+        // For a dynamic app, you might need to fetch or render the page
+        // For this test, we'll assume a simplified direct check of script tags
+        // This doesn't execute the HTML, just checks for tag presence.
+        const fs = require('fs');
+        const path = require('path');
+        const htmlContent = fs.readFileSync(path.resolve(__dirname, '../app/index.html'), 'utf8');
+        const { JSDOM } = require('jsdom');
+        const dom = new JSDOM(htmlContent);
+        headElement = dom.window.document.head;
+    });
+
+    test('should include Vercel Analytics initialization script', () => {
+        const scripts = Array.from(headElement.querySelectorAll('script'));
+        const initScript = scripts.find(script => 
+            script.textContent.includes('window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };')
+        );
+        expect(initScript).not.toBeNull();
+        expect(initScript.defer).toBe(false); // Should not be deferred
+    });
+
+    test('should include Vercel Analytics deferred script tag', () => {
+        const deferredScript = headElement.querySelector('script[src="/_vercel/insights/script.js"]');
+        expect(deferredScript).not.toBeNull();
+        expect(deferredScript.defer).toBe(true);
     });
 }); 
