@@ -1,4 +1,4 @@
-const game = require('../script.js');
+const game = require('../app/script.js');
 
 const localStorageMock = (() => {
     let store = {};

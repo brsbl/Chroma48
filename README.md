@@ -145,18 +145,10 @@ Accessed via the gear icon at the top right of the viewport.
 *   The game grid and tiles resize proportionally.
 *   Touch controls are provided for mobile devices.
 
----
-This README provides a good overview for Chroma48.
+## Debugging
 
-Next, **Step 3: Write Unit Tests using Jest**.
-This is the most complex part. I'll start by creating the test file and focusing on the pure utility functions (color manipulation) first, as they don't require DOM mocking. Then I'll move to functions with more dependencies.
+The following keyboard shortcuts are available for local debugging purposes:
 
-**Note for User regarding Jest Setup:**
-To run these tests, you would typically need to:
-1.  Install Jest: `npm install --save-dev jest` (or `yarn add --dev jest`).
-2.  Potentially install `jest-environment-jsdom` if not default: `npm install --save-dev jest-environment-jsdom`.
-3.  Add a test script to your `package.json`: `"scripts": { "test": "jest" }`.
-4.  Run tests with `npm test` or `yarn test`.
-The JavaScript code would also need to be structured to allow Jest to import functions (e.g., using `module.exports` if running in a Node.js-like environment orchestrated by Jest, or ensuring functions are global if Jest is configured to pick them up that way for simpler scripts, though `module.exports` is standard for testability). For simplicity in generating the test code here, I'll assume functions can be accessed/imported.
+*   **Cmd/Ctrl + E**: Triggers the new high score confetti animation.
+*   **Cmd/Ctrl + G**: Triggers the Game Over screen immediately.
 
-Let's start creating `script.test.js` with tests for color utilities. 

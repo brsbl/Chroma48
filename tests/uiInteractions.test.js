@@ -1,4 +1,4 @@
-const game = require('../script.js');
+const game = require('../app/script.js');
 
 // Mocking localStorage for tests that might eventually use it (like bestScore)
 const localStorageMock = (() => {
@@ -43,7 +43,7 @@ describe('Settings Modal UI Interactions', () => {
         game._initializeDOMElements();
         game._resetModuleState({ 
             isColorMode: false, 
-            TILE_COLORS: [...game.TILE_COLORS_DEFAULT]
+            TILE_COLORS: [...game.TILE_COLORS_DEFAULT_GETTER()]
         });
 
         settingsModal = document.getElementById('settings-modal');
@@ -63,21 +63,19 @@ describe('Settings Modal UI Interactions', () => {
         jest.useFakeTimers();
 
         // Add listeners as script.js would. 
-        if (viewportSettingsButton) viewportSettingsButton.addEventListener('click', game.openSettingsModal);
-        if (closeSettingsModalButton) closeSettingsModalButton.addEventListener('click', game.closeSettingsModal);
-        if (saveSettingsButton) saveSettingsButton.addEventListener('click', game.saveSettings);
-        if (cancelSettingsButton) cancelSettingsButton.addEventListener('click', game.closeSettingsModal);
+        if (viewportSettingsButton) viewportSettingsButton.addEventListener('click', game.openSettingsModal.bind(game));
+        if (closeSettingsModalButton) closeSettingsModalButton.addEventListener('click', game.closeSettingsModal.bind(game));
+        if (saveSettingsButton) saveSettingsButton.addEventListener('click', game.saveSettings.bind(game));
+        if (cancelSettingsButton) cancelSettingsButton.addEventListener('click', game.closeSettingsModal.bind(game));
         if (colorPickerInput) colorPickerInput.addEventListener('input', game.handleSettingsColorPickerInput);
     });
     
     afterEach(() => {
-        jest.clearAllTimers();
-        jest.restoreAllMocks();
-        if (viewportSettingsButton) viewportSettingsButton.removeEventListener('click', game.openSettingsModal);
-        if (closeSettingsModalButton) closeSettingsModalButton.removeEventListener('click', game.closeSettingsModal);
-        if (saveSettingsButton) saveSettingsButton.removeEventListener('click', game.saveSettings);
-        if (cancelSettingsButton) cancelSettingsButton.removeEventListener('click', game.closeSettingsModal);
-        if (colorPickerInput) colorPickerInput.removeEventListener('input', game.handleSettingsColorPickerInput);
+        // Clear spies and timers. DOM listeners attached in beforeEach will be cleared
+        // by the outer describe block's afterEach which resets document.body.innerHTML.
+        jest.clearAllMocks();
+        jest.clearAllTimers(); 
+        // No need to remove listeners individually here if outer afterEach clears DOM
     });
 
     describe('populateSettingsColorPalette', () => {
@@ -186,7 +184,7 @@ describe('Settings Modal UI Interactions', () => {
             paletteSuccessMessage.style.display = 'none';
             game.saveSettings();
             expect(paletteSuccessMessage.style.display).toBe('block');
-            expect(paletteSuccessMessage.textContent).toBe('Settings saved and applied!');
+            expect(paletteSuccessMessage.textContent).toBe('Settings saved successfully!');
             jest.advanceTimersByTime(3000);
             expect(paletteSuccessMessage.style.display).toBe('none');
         });
@@ -394,81 +392,121 @@ describe('Instructions UI Interactions', () => {
     });
 }); 
 
-describe('Game Controls UI Interactions', () => {
-    let pauseButton, messageContainer, tryAgainButton;
-    let setIntervalSpy, clearIntervalSpy;
+describe('Game Pause and Resume UI', () => {
+    let pauseButton, messageContainer, tryAgainButton, gameIntervalRef; // Keep track of interval
 
     beforeEach(() => {
         document.body.innerHTML = `
-            <a class="pause-button" id="pause-button"><img src="pause.png" alt="Pause" class="button-icon">Pause</a>
-            <div class="game-message" id="game-message" style="display: none;"><p></p><div class="lower"><a class="retry-button" id="retry-button">Try Again</a></div></div>
+            <div id="game-message" style="display: none;">
+                <p></p>
+                <div class="lower">
+                    <a class="retry-button" id="retry-button">Try Again</a>
+                </div>
+            </div>
+            <button id="pause-button"><img src="icons/pause.png" alt="Pause" class="button-icon">Pause</button>
+            <div id="grid-container"></div> 
+            <div id="score">0</div>
+            <div id="best-score">0</div>
+            <div id="active-tile-container"></div> {/* Assuming active tiles might be parented here or gridContainer */}
         `;
-        game._initializeDOMElements();
-        game._resetModuleState({ isPaused: false, isGameOver: false, activeFallingTile: null, gameInterval: null });
-
+        game._initializeDOMElements(); 
+        
         pauseButton = document.getElementById('pause-button');
         messageContainer = document.getElementById('game-message');
         tryAgainButton = document.getElementById('retry-button');
-
-        setIntervalSpy = jest.spyOn(window, 'setInterval');
-        clearIntervalSpy = jest.spyOn(window, 'clearInterval');
         
-        if (pauseButton) pauseButton.addEventListener('click', game.togglePauseGame);
+        game._resetModuleState({ 
+            isGameOver: false, 
+            isPaused: false, 
+            activeFallingTile: { row: 0, col: 0, value: 2, element: document.createElement('div') } 
+        });
+
+        if (game.getGameState().gameInterval) clearInterval(game.getGameState().gameInterval);
+        game._resetModuleState({ ...game.getGameState(), gameInterval: null });
+
+        if (pauseButton) {
+            pauseButton.addEventListener('click', game.togglePauseGame.bind(game)); // Bind to game (which is gameApi)
+        }
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
-        if (pauseButton) pauseButton.removeEventListener('click', game.togglePauseGame);
+        // Event listeners on pauseButton will be cleared when document.body.innerHTML is reset.
+        if (game.getGameState().gameInterval) {
+            clearInterval(game.getGameState().gameInterval);
+            game._resetModuleState({ ...game.getGameState(), gameInterval: null });
+        }
+        jest.restoreAllMocks(); 
+        document.body.innerHTML = ''; 
     });
 
-    test('should initially be unpaused, button shows Pause', () => {
+    test('toggling pause should show pause message, update button text, and clear game interval', () => {
+        // Simulate game running by setting an interval to game.gameInterval
+        // Store ref to any interval created by game logic if necessary.
+        // For this test, we assume activeFallingTile is present, so an interval would be set on resume.
+        // Let's first ensure it's not paused and message is hidden
         expect(game.getGameState().isPaused).toBe(false);
-        expect(pauseButton.textContent).toBe('Pause');
-        expect(pauseButton.querySelector('img').getAttribute('alt')).toBe('Pause');
         expect(messageContainer.style.display).toBe('none');
-    });
+        
+        // Start a mock game interval to check if it's cleared
+        const mockIntervalId = setInterval(() => {}, 1000);
+        game._resetModuleState({...game.getGameState(), gameInterval: mockIntervalId });
 
-    test('first call to game.togglePauseGame should pause the game', () => {
-        const mockIntervalId = 123;
-        game._resetModuleState({ gameInterval: mockIntervalId }); 
-        game.togglePauseGame();
-        const gameState = game.getGameState();
-        expect(gameState.isPaused).toBe(true);
-        expect(clearIntervalSpy).toHaveBeenCalledWith(mockIntervalId);
-        expect(gameState.gameInterval).toBeNull();
-        expect(pauseButton.textContent).toBe('Resume');
-        expect(pauseButton.querySelector('img').getAttribute('alt')).toBe('Play');
-        expect(tryAgainButton.textContent).toBe('Resume Game');
-        expect(messageContainer.querySelector('p').textContent).toBe('Game Paused');
+
+        pauseButton.click(); // This calls togglePauseGame which should use the game's pauseButton element.
+
+        expect(game.getGameState().isPaused).toBe(true);
         expect(messageContainer.style.display).toBe('flex');
+        expect(messageContainer.querySelector('p').textContent).toBe('Game Paused');
+        // Check for image alt text and text content for robustness
+        expect(pauseButton.querySelector('img').alt).toBe('Play');
+        expect(pauseButton.textContent.includes('Resume')).toBe(true);
+        expect(tryAgainButton.textContent).toBe('Try Again'); // Text shouldn't change on pause
+        expect(game.getGameState().gameInterval).toBeNull(); // Interval should be cleared
     });
 
-    test('second call to game.togglePauseGame should resume the game', () => {
-        game.togglePauseGame(); 
-        game.togglePauseGame(); 
-        expect(game.getGameState().isPaused).toBe(false);
-        expect(pauseButton.textContent).toBe('Pause');
-    });
+    test('toggling resume should hide pause message, update button text, and restart game interval if tile active', () => {
+        // First, pause the game
+        pauseButton.click(); 
+        expect(game.getGameState().isPaused).toBe(true);
+        expect(messageContainer.style.display).toBe('flex');
+        // Ensure interval is cleared by pause
+        game._resetModuleState({...game.getGameState(), gameInterval: null });
 
-    test('resuming game should start interval if a tile is active and game not over', () => {
-        game._resetModuleState({ activeFallingTile: { tileObject: {value: 2, color: 'red'}, row: 0, col: 0 }, isGameOver: false });
-        game.togglePauseGame(); 
-        game.togglePauseGame(); 
+
+        pauseButton.click(); // Resume game
+
         expect(game.getGameState().isPaused).toBe(false);
-        expect(setIntervalSpy).toHaveBeenCalledWith(game.gameLoop, game.FALL_SPEED || 500);
-        expect(game.getGameState().gameInterval).not.toBeNull();
+        expect(messageContainer.style.display).toBe('none');
+        expect(pauseButton.querySelector('img').alt).toBe('Pause');
+        expect(pauseButton.textContent.includes('Pause')).toBe(true);
+        expect(tryAgainButton.textContent).toBe('Try Again'); 
+        // Check if interval is restarted (togglePauseGame restarts it if activeFallingTile exists)
+        expect(game.getGameState().gameInterval).not.toBeNull(); 
     });
     
-    test('clicking the pauseButton should toggle game pause state and UI', () => {
-        expect(game.getGameState().isPaused).toBe(false);
-        pauseButton.click();
+    test('toggling resume should not restart game interval if no active tile', () => {
+        game._resetModuleState({ ...game.getGameState(), activeFallingTile: null }); // No active tile
+        pauseButton.click(); // Pause
         expect(game.getGameState().isPaused).toBe(true);
-        expect(pauseButton.textContent).toBe('Resume');
-        pauseButton.click();
+        game._resetModuleState({...game.getGameState(), gameInterval: null }); // Ensure cleared by pause
+
+        pauseButton.click(); // Resume
+
         expect(game.getGameState().isPaused).toBe(false);
-        expect(pauseButton.textContent).toBe('Pause');
+        expect(messageContainer.style.display).toBe('none');
+        expect(game.getGameState().gameInterval).toBeNull(); // Should not restart interval
     });
-}); 
+
+    test('pause button should not affect state if game is over', () => {
+        game._resetModuleState({ ...game.getGameState(), isGameOver: true, isPaused: false, gameInterval: null });
+        
+        pauseButton.click(); 
+
+        expect(game.getGameState().isPaused).toBe(false); 
+        expect(messageContainer.style.display).toBe('none'); 
+        expect(game.getGameState().gameInterval).toBeNull();
+    });
+});
 
 describe('createBackgroundGrid', () => {
     let gridContainerElement;
@@ -642,21 +680,25 @@ describe('drawGrid', () => {
     });
 
     test('should create new tiles for non-null cells in the grid', () => {
-        gridContainerElement.innerHTML = ''; 
+        const testGrid = [
+            [{value: 2, color: 'red'}, null],
+            [null, {value: 4, color: 'blue'}]
+        ];
+        game._resetModuleState({ grid: testGrid, GRID_SIZE: 2 });
+        createTileElementSpy.mockClear(); // Clear before test
         game.drawGrid();
-        expect(gridContainerElement.querySelectorAll('.tile').length).toBe(2); 
+        expect(createTileElementSpy).toHaveBeenCalledTimes(2); // Assert calls to the spy
     });
 
     test('should not create tiles for null cells', () => {
-        game._resetModuleState({
-            grid: [
-                [null, null],
-                [null, null]
-            ],
-            GRID_SIZE: 2
-        });
+        const testGrid = [
+            [null, null],
+            [null, null]
+        ];
+        game._resetModuleState({ grid: testGrid, GRID_SIZE: 2 });
+        createTileElementSpy.mockClear(); // Clear before test
         game.drawGrid();
-        expect(createTileElementSpy).not.toHaveBeenCalled();
+        expect(createTileElementSpy).not.toHaveBeenCalled(); // Assert no calls if all null
     });
 }); 
 

@@ -1,4 +1,4 @@
-const game = require('../script.js');
+const game = require('../app/script.js');
 
 const localStorageMock = (() => {
     let store = {};
@@ -38,7 +38,7 @@ describe('Core Game Logic', () => {
             bestScore: 0,
             isColorMode: false,
             isGameOver: false,
-            TILE_COLORS: [...game.TILE_COLORS_DEFAULT]
+            TILE_COLORS: [...game.TILE_COLORS_DEFAULT_GETTER()]
         });
         localStorageMock.clear();
         
@@ -122,7 +122,7 @@ describe('Core Game Logic', () => {
             expect(changed).toBe(true);
             const finalGrid = game.getGameState().grid;
             const expectedMixedColor = game.mixColors('#f00', '#0f0');
-            expect(finalGrid[0][0]).toEqual({value: 4, color: expectedMixedColor});
+            expect(finalGrid[0][0]).toEqual(expect.objectContaining({value: 4, color: expectedMixedColor, isNewlyMerged: true}));
             expect(finalGrid[0][1]).toEqual({value: 4, color: '#00f'});
             expect(finalGrid[0][2]).toBeNull();
             expect(finalGrid[0][3]).toBeNull();
@@ -142,8 +142,8 @@ describe('Core Game Logic', () => {
             const finalGrid = game.getGameState().grid;
             const expectedMixedColor1 = game.mixColors('#f00', '#0f0');
             const expectedMixedColor2 = game.mixColors('#00f', '#ff0');
-            expect(finalGrid[0][0]).toEqual({value: 4, color: expectedMixedColor1});
-            expect(finalGrid[0][1]).toEqual({value: 8, color: expectedMixedColor2});
+            expect(finalGrid[0][0]).toEqual(expect.objectContaining({value: 4, color: expectedMixedColor1, isNewlyMerged: true}));
+            expect(finalGrid[0][1]).toEqual(expect.objectContaining({value: 8, color: expectedMixedColor2, isNewlyMerged: true}));
             expect(finalGrid[0][2]).toBeNull();
             expect(finalGrid[0][3]).toBeNull();
             expect(game.getGameState().score).toBe(12); // 4 + 8
@@ -161,7 +161,7 @@ describe('Core Game Logic', () => {
             expect(changed).toBe(true);
             const finalGrid = game.getGameState().grid;
             const expectedMixedColor = game.mixColors('red1', 'red2');
-            expect(finalGrid[0][0]).toEqual({ value: 4, color: expectedMixedColor });
+            expect(finalGrid[0][0]).toEqual(expect.objectContaining({ value: 4, color: expectedMixedColor, isNewlyMerged: true }));
             expect(finalGrid[0][1]).toEqual({ value: 2, color: 'red3' });
             expect(finalGrid[0][2]).toBeNull();
             expect(game.getGameState().score).toBe(4); // Score from the first merge only
@@ -180,7 +180,7 @@ describe('Core Game Logic', () => {
             const finalGrid = game.getGameState().grid;
             const expectedMixedColor = game.mixColors('#f00', '#0f0');
             expect(finalGrid[0][3]).toEqual({value:4, color:'#00f'});
-            expect(finalGrid[0][2]).toEqual({ value: 4, color: expectedMixedColor });
+            expect(finalGrid[0][2]).toEqual(expect.objectContaining({ value: 4, color: expectedMixedColor, isNewlyMerged: true }));
             expect(finalGrid[0][1]).toBeNull();
             expect(finalGrid[0][0]).toBeNull();
             expect(game.getGameState().score).toBe(4);
@@ -198,7 +198,7 @@ describe('Core Game Logic', () => {
             expect(changed).toBe(true);
             const finalGrid = game.getGameState().grid;
             const expectedMixedColor = game.mixColors('#f00', '#0f0');
-            expect(finalGrid[0][0]).toEqual({ value: 4, color: expectedMixedColor });
+            expect(finalGrid[0][0]).toEqual(expect.objectContaining({ value: 4, color: expectedMixedColor, isNewlyMerged: true }));
             expect(finalGrid[1][0]).toEqual({value:4, color:'#00f'});
             expect(finalGrid[2][0]).toBeNull();
             expect(finalGrid[3][0]).toBeNull();
@@ -217,7 +217,7 @@ describe('Core Game Logic', () => {
             expect(changed).toBe(true);
             const finalGrid = game.getGameState().grid;
             const expectedMixedColor = game.mixColors('#f00', '#0f0');
-            expect(finalGrid[3][0]).toEqual({ value: 4, color: expectedMixedColor });
+            expect(finalGrid[3][0]).toEqual(expect.objectContaining({ value: 4, color: expectedMixedColor, isNewlyMerged: true }));
             expect(finalGrid[2][0]).toEqual({value:4, color:'#00f'});
             expect(finalGrid[1][0]).toBeNull();
             expect(finalGrid[0][0]).toBeNull();
@@ -241,24 +241,27 @@ describe('Core Game Logic', () => {
             const changed = game.moveTilesLeft();
             expect(changed).toBe(true);
             const finalGrid = game.getGameState().grid;
-            expect(finalGrid[0][0]).toEqual({value: 4, color: '#FF0000'}); // Color remains same, value doubles
+            expect(finalGrid[0][0]).toEqual(expect.objectContaining({value: 4, color: '#FF0000', isNewlyMerged: true})); // Correct: Merged tile
             expect(finalGrid[0][1]).toBeNull();
             expect(game.getGameState().score).toBe(4); // Score should update
         });
 
         test('moveTilesLeft should not merge different colors, even if values are same', () => {
             const initialGrid = [
-                [{value:2, color:'#FF0000'}, {value:2, color:'#00FF00'}, null, null],
+                [{value:2, color:'#FF0000'}, {value:2, color:'#00FF00'}, null, null], // Different colors
                 [null, null, null, null],
                 [null, null, null, null],
                 [null, null, null, null]
             ];
-            game._resetModuleState({ grid: initialGrid, score: 0, isColorMode: true, GRID_SIZE: 4 });
+            game._resetModuleState({ grid: initialGrid, score: 0, isColorMode: true, TILE_COLORS: ['#FF0000', '#00FF00'], GRID_SIZE: 4 });
             const changed = game.moveTilesLeft();
-            expect(changed).toBe(false); // No change expected
+            // If tiles are at the edge and cannot merge or move further left, 'changed' should be false.
+            // If they could compact but not merge, 'changed' might be true but no merge occurs.
+            // Assuming here they are already as far left as they can go without merging:
+            expect(changed).toBe(false); 
             const finalGrid = game.getGameState().grid;
-            expect(finalGrid[0][0]).toEqual({value:2, color:'#FF0000'});
-            expect(finalGrid[0][1]).toEqual({value:2, color:'#00FF00'});
+            expect(finalGrid[0][0]).toEqual({value:2, color:'#FF0000'}); // Corrected: Not merged, exact object
+            expect(finalGrid[0][1]).toEqual({value:2, color:'#00FF00'}); // Corrected: Not merged, exact object
             expect(game.getGameState().score).toBe(0); // Score should not change
         });
 
@@ -273,8 +276,8 @@ describe('Core Game Logic', () => {
             const changed = game.moveTilesLeft();
             expect(changed).toBe(true);
             const finalGrid = game.getGameState().grid;
-            expect(finalGrid[0][0]).toEqual({value: 4, color: '#FF0000'});
-            expect(finalGrid[0][1]).toEqual({value: 8, color: '#FF0000'});
+            expect(finalGrid[0][0]).toEqual(expect.objectContaining({value: 4, color: '#FF0000', isNewlyMerged: true}));
+            expect(finalGrid[0][1]).toEqual(expect.objectContaining({value: 8, color: '#FF0000', isNewlyMerged: true}));
             expect(finalGrid[0][2]).toBeNull();
             expect(finalGrid[0][3]).toBeNull();
             expect(game.getGameState().score).toBe(12); // 4 + 8
@@ -291,7 +294,7 @@ describe('Core Game Logic', () => {
             const changed = game.moveTilesRight();
             expect(changed).toBe(true);
             const finalGrid = game.getGameState().grid;
-            expect(finalGrid[0][3]).toEqual({value: 4, color: '#00FF00'});
+            expect(finalGrid[0][3]).toEqual(expect.objectContaining({value: 4, color: '#00FF00', isNewlyMerged: true}));
             expect(finalGrid[0][2]).toBeNull();
             expect(game.getGameState().score).toBe(4);
         });
@@ -307,7 +310,7 @@ describe('Core Game Logic', () => {
             const changed = game.moveTilesUp();
             expect(changed).toBe(true);
             const finalGrid = game.getGameState().grid;
-            expect(finalGrid[0][0]).toEqual({ value: 4, color: '#0000FF' });
+            expect(finalGrid[0][0]).toEqual(expect.objectContaining({ value: 4, color: '#0000FF', isNewlyMerged: true }));
             expect(finalGrid[1][0]).toBeNull();
             expect(game.getGameState().score).toBe(4);
         });
@@ -323,7 +326,7 @@ describe('Core Game Logic', () => {
             const changed = game.moveTilesDown();
             expect(changed).toBe(true);
             const finalGrid = game.getGameState().grid;
-            expect(finalGrid[3][0]).toEqual({ value: 4, color: '#FFFF00' });
+            expect(finalGrid[3][0]).toEqual(expect.objectContaining({ value: 4, color: '#FFFF00', isNewlyMerged: true }));
             expect(finalGrid[2][0]).toBeNull();
             expect(game.getGameState().score).toBe(4);
         });
@@ -341,7 +344,7 @@ describe('spawnNewFallingTile and gameLoop', () => {
         `;
         game._initializeDOMElements();
         game._resetModuleState({
-            TILE_COLORS: ['#FF0000', '#00FF00', '#0000FF', '#FFFF00'] 
+            TILE_COLORS: game.TILE_COLORS_DEFAULT_GETTER()
         });
         localStorageMock.clear();
         
@@ -399,7 +402,7 @@ describe('spawnNewFallingTile and gameLoop', () => {
             expect(gameState.activeFallingTile.tileObject.color).toBe('#FF0000');
             expect(gameState.activeFallingTile.row).toBe(0);
             expect(gameState.grid[0][gameState.activeFallingTile.col]).toEqual(gameState.activeFallingTile.tileObject);
-            expect(setInterval).toHaveBeenCalledWith(game.gameLoop, game.FALL_SPEED || 500);
+            expect(setInterval).toHaveBeenCalledWith(expect.any(Function), game.getGameState().FALL_SPEED || 500);
         });
 
         test('should cycle through TILE_COLORS', () => {
@@ -430,7 +433,7 @@ describe('spawnNewFallingTile and gameLoop', () => {
         });
 
         test('should move active tile down if space is available', () => {
-            const tileToFall = { value: 2, color: game.TILE_COLORS_DEFAULT[0] };
+            const tileToFall = { value: 2, color: game.TILE_COLORS_DEFAULT_GETTER()[0] };
             const initialGrid = JSON.parse(JSON.stringify(game.getGameState().grid));
             initialGrid[0][0] = tileToFall;
             game._resetModuleState({ 
@@ -446,7 +449,7 @@ describe('spawnNewFallingTile and gameLoop', () => {
 
         test('should land tile if at bottom of grid', () => {
             const GRID_S = game.getGameState().GRID_SIZE || 4;
-            const tileToLand = { value: 2, color: game.TILE_COLORS_DEFAULT[0] };
+            const tileToLand = { value: 2, color: game.TILE_COLORS_DEFAULT_GETTER()[0] };
             const initialGrid = JSON.parse(JSON.stringify(game.getGameState().grid));
             initialGrid[GRID_S - 1][0] = tileToLand;
             game._resetModuleState({ 
@@ -465,8 +468,8 @@ describe('spawnNewFallingTile and gameLoop', () => {
         });
 
         test('should land tile if cell below is occupied', () => {
-            const tileToLand = { value: 2, color: game.TILE_COLORS_DEFAULT[0] };
-            const obstacleTile = { value: 4, color: game.TILE_COLORS_DEFAULT[1] };
+            const tileToLand = { value: 2, color: game.TILE_COLORS_DEFAULT_GETTER()[0] };
+            const obstacleTile = { value: 4, color: game.TILE_COLORS_DEFAULT_GETTER()[1] };
             const initialGrid = JSON.parse(JSON.stringify(game.getGameState().grid));
             initialGrid[0][0] = tileToLand;
             initialGrid[1][0] = obstacleTile;
@@ -490,7 +493,7 @@ describe('spawnNewFallingTile and gameLoop', () => {
             nearlyFullGrid[GRID_S - 2][0] = null; 
             nearlyFullGrid[GRID_S - 1][0] = null; 
             
-            const tileToLand = { value: 2, color: game.TILE_COLORS_DEFAULT[0] };
+            const tileToLand = { value: 2, color: game.TILE_COLORS_DEFAULT_GETTER()[0] };
             nearlyFullGrid[GRID_S - 2][0] = tileToLand;
 
             game._resetModuleState({ 

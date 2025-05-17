@@ -1,4 +1,4 @@
-const game = require('../script.js');
+const game = require('../app/script.js');
 
 // Mocking localStorage for tests that might eventually use it (like bestScore)
 const localStorageMock = (() => {
@@ -22,6 +22,7 @@ describe('Touch Controls UI Interactions', () => {
     let gridContainerElement;
     let moveTilesUpSpy, moveTilesDownSpy, moveTilesLeftSpy, moveTilesRightSpy;
     let isBoardFullTouchSpy;
+    let boundHandleTouchStart, boundHandleTouchEnd;
 
     beforeEach(() => {
         document.body.innerHTML = `<div id="grid-container" class="grid-container"></div>`; // Use actual ID for grid container
@@ -35,15 +36,18 @@ describe('Touch Controls UI Interactions', () => {
         moveTilesRightSpy = jest.spyOn(game, 'moveTilesRight').mockReturnValue(false);
         isBoardFullTouchSpy = jest.spyOn(game, 'isBoardFull').mockReturnValue(false);
         
-        // Attach actual handlers from game module
-        gridContainerElement.addEventListener('touchstart', game.handleTouchStart, { passive: false });
-        gridContainerElement.addEventListener('touchend', game.handleTouchEnd);
+        // Attach actual handlers from game module, WITH BINDING
+        boundHandleTouchStart = game.handleTouchStart.bind(game);
+        boundHandleTouchEnd = game.handleTouchEnd.bind(game);
+        gridContainerElement.addEventListener('touchstart', boundHandleTouchStart, { passive: false });
+        gridContainerElement.addEventListener('touchend', boundHandleTouchEnd);
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
-        gridContainerElement.removeEventListener('touchstart', game.handleTouchStart);
-        gridContainerElement.removeEventListener('touchend', game.handleTouchEnd);
+        // Ensure bound functions are used for removal if they were stored
+        if (boundHandleTouchStart) gridContainerElement.removeEventListener('touchstart', boundHandleTouchStart);
+        if (boundHandleTouchEnd) gridContainerElement.removeEventListener('touchend', boundHandleTouchEnd);
     });
 
     function createMockTouchEvent(type, clientX, clientY) {
@@ -100,6 +104,7 @@ describe('Touch Controls UI Interactions', () => {
 describe('handleUserKeyPress', () => {
     let moveUpSpy, moveDownSpy, moveLeftSpy, moveRightSpy;
     let isBoardFullKeySpy; // Use a distinct name for this spy if needed
+    let mockEvent;
 
     beforeEach(() => {
         document.body.innerHTML = '<div id="grid-container"></div><div id="score">0</div>';
@@ -112,7 +117,20 @@ describe('handleUserKeyPress', () => {
         
         isBoardFullKeySpy = jest.spyOn(game, 'isBoardFull').mockReturnValue(false); // Renamed for clarity
 
-        game._resetModuleState({ isGameOver: false, isPaused: false, activeFallingTile: null });
+        game._resetModuleState({ 
+            isGameOver: false, 
+            isPaused: false, 
+            activeFallingTile: null,
+            isModalActive: false // Explicitly reset isModalActive
+        });
+        jest.clearAllMocks(); // Clear mock function call counts
+
+        // Basic mock event, customize as needed per test
+        mockEvent = {
+            key: '',
+            preventDefault: jest.fn(),
+            target: document.body // Add a default target
+        };
     });
 
     afterEach(() => {
@@ -128,42 +146,52 @@ describe('handleUserKeyPress', () => {
     };
 
     test('should return early if game is over', () => {
-        game._resetModuleState({ isGameOver: true });
-        game.handleUserKeyPress(keyEvents.ArrowLeft);
-        // Check a side effect or absence of calls if possible, e.g., score not changed, grid not changed.
-        // For now, simply ensuring no error is thrown and relying on the fact that moveLeftSpy was not called (though we cant assert that reliably)
-        expect(true).toBe(true); // Placeholder if no other assertion
+        game._resetModuleState({ isGameOver: true, isPaused: false });
+        mockEvent.key = 'ArrowLeft';
+        game.handleUserKeyPress(mockEvent);
+        // Check that no move functions were called, etc.
+        expect(game.moveTilesLeft).not.toHaveBeenCalled();
     });
 
     test('should return early if game is paused', () => {
-        game._resetModuleState({ isPaused: true });
-        game.handleUserKeyPress(keyEvents.ArrowLeft);
-        expect(true).toBe(true); // Placeholder
+        game._resetModuleState({ isGameOver: false, isPaused: true });
+        mockEvent.key = 'ArrowLeft';
+        game.handleUserKeyPress(mockEvent);
+        expect(game.moveTilesLeft).not.toHaveBeenCalled();
     });
 
     test('should attempt to call moveTilesLeft for ArrowLeft key', () => {
-        game.handleUserKeyPress(keyEvents.ArrowLeft);
-        // expect(moveLeftSpy).toHaveBeenCalledTimes(1); // Problematic assertion
+        mockEvent.key = 'ArrowLeft';
+        game.handleUserKeyPress(mockEvent);
+        expect(mockEvent.preventDefault).toHaveBeenCalled();
+        expect(game.moveTilesLeft).toHaveBeenCalled();
     });
 
     test('should attempt to call moveTilesRight for ArrowRight key', () => {
-        game.handleUserKeyPress(keyEvents.ArrowRight);
-        // expect(moveRightSpy).toHaveBeenCalledTimes(1); // Problematic assertion
+        mockEvent.key = 'ArrowRight';
+        game.handleUserKeyPress(mockEvent);
+        expect(mockEvent.preventDefault).toHaveBeenCalled();
+        expect(game.moveTilesRight).toHaveBeenCalled();
     });
 
     test('should attempt to call moveTilesUp for ArrowUp key', () => {
-        game.handleUserKeyPress(keyEvents.ArrowUp);
-        // expect(moveUpSpy).toHaveBeenCalledTimes(1); // Problematic assertion
+        mockEvent.key = 'ArrowUp';
+        game.handleUserKeyPress(mockEvent);
+        expect(mockEvent.preventDefault).toHaveBeenCalled();
+        expect(game.moveTilesUp).toHaveBeenCalled();
     });
 
     test('should attempt to call moveTilesDown for ArrowDown key', () => {
-        game.handleUserKeyPress(keyEvents.ArrowDown);
-        // expect(moveDownSpy).toHaveBeenCalledTimes(1); // Problematic assertion
+        mockEvent.key = 'ArrowDown';
+        game.handleUserKeyPress(mockEvent);
+        expect(mockEvent.preventDefault).toHaveBeenCalled();
+        expect(game.moveTilesDown).toHaveBeenCalled();
     });
 
     test('should do nothing for unhandled keys', () => {
         const initialGridState = JSON.stringify(game.getGameState().grid);
-        game.handleUserKeyPress(keyEvents.Enter);
+        mockEvent.key = 'Enter';
+        game.handleUserKeyPress(mockEvent);
         // expect(moveLeftSpy).not.toHaveBeenCalled(); // Problematic
         // expect(drawSpy).not.toHaveBeenCalled(); // Problematic
         expect(JSON.stringify(game.getGameState().grid)).toEqual(initialGridState); // Check side-effect: grid unchanged
@@ -181,7 +209,8 @@ describe('handleUserKeyPress', () => {
             game._resetModuleState({ activeFallingTile: null, isGameOver: false }); 
             isBoardFullKeySpy.mockReturnValue(false); 
 
-            game.handleUserKeyPress(keyEvents.ArrowLeft);
+            mockEvent.key = 'ArrowLeft';
+            game.handleUserKeyPress(mockEvent);
             // Cannot directly spy on spawnNewFallingTile, drawGrid, or handleGameOver being called internally.
             // Tests for spawnNewFallingTile, drawGrid, handleGameOver cover their own logic.
             // This test now mostly ensures handleUserKeyPress doesn't crash and respects isGameOver/isPaused.
@@ -209,7 +238,8 @@ describe('handleUserKeyPress', () => {
             const initialScore = game.getGameState().score;
             game._resetModuleState({ activeFallingTile: null, isGameOver: false }); 
 
-            game.handleUserKeyPress(keyEvents.ArrowLeft);
+            mockEvent.key = 'ArrowLeft';
+            game.handleUserKeyPress(mockEvent);
             
             expect(JSON.stringify(game.getGameState().grid)).toEqual(initialGridState);
             expect(game.getGameState().score).toEqual(initialScore);
@@ -222,21 +252,28 @@ describe('handleTouchMove', () => {
     let gridContainerElement;
 
     beforeEach(() => {
-        document.body.innerHTML = '<div id="grid-container" class="grid-container"></div>'; // Added class="grid-container"
+        // Added .game-container wrapper
+        document.body.innerHTML = '<div class="game-container"><div id="grid-container" class="grid-container"></div></div>'; 
         gridContainerElement = document.getElementById('grid-container');
-        game._initializeDOMElements(); // Ensures game.gridContainer is set if needed by handler
+        game._initializeDOMElements(); // Ensures game.gridContainer and game.gameContainer are set
         // Attach listener for tests that dispatch events
-        gridContainerElement.addEventListener('touchmove', game.handleTouchMove, { passive: false });
+        // Bind to gameApi (which is 'game' in the test file context)
+        const boundHandleTouchMove = game.handleTouchMove.bind(game);
+        gridContainerElement.addEventListener('touchmove', boundHandleTouchMove, { passive: false });
     });
 
     afterEach(() => {
-        gridContainerElement.removeEventListener('touchmove', game.handleTouchMove);
+        // Listener removal might be tricky if not storing boundHandleTouchMove, 
+        // but full body clear should handle it for test isolation.
+        // If issues arise, explicitly store and remove the bound function.
+        document.body.innerHTML = ''; // Clear DOM to remove listeners
     });
 
     test('should call event.preventDefault if event target is within grid-container (direct call)', () => {
         const mockEvent = {
             target: gridContainerElement, 
             preventDefault: jest.fn(),
+            touches: [{}], // Added touches array
             closest: function(selector) { // Manual mock for closest behavior
                 if (this.target.matches(selector) || this.target.id === 'grid-container' && selector === '.grid-container') return this.target;
                 return null;
@@ -264,6 +301,7 @@ describe('handleTouchMove', () => {
         const mockEvent = {
             target: outsideElement,
             preventDefault: jest.fn(),
+            touches: [{}], // Added touches array
             closest: function(selector) { return null; } // Mock closest to return null
         };
         game.handleTouchMove(mockEvent);
