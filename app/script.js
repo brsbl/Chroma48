@@ -20,7 +20,8 @@ let isPaused = false;
 let currentColorIndex = 0;
 let isColorMode = false;
 let isModalActive = false;
-let newBestScoreAchievedThisGame = false; // New flag
+let newBestScoreAchievedThisGame = false; // This flag now gates confetti per game
+
 
 // DOM Element Variables - to be assigned in _initializeDOMElements
 let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContainer,
@@ -166,11 +167,7 @@ const gameApi = {
     },
 
     triggerConfettiEffect: function() {
-        // Only trigger confetti if a new best score was achieved this game
-        if (!newBestScoreAchievedThisGame) {
-            return;
-        }
-        
+        // Simplified: just plays confetti if instance exists. Gating is done by callers.
         if (this.jsConfettiInstance) {
             this.jsConfettiInstance.addConfetti({
                 emojis: ['🎉'],
@@ -191,14 +188,17 @@ const gameApi = {
             score += newPoints;
         }
         if (scoreDisplay) scoreDisplay.textContent = score.toLocaleString();
-        if (score > bestScore) {
+        
+        if (score > bestScore) { // New overall best score
+            if (!newBestScoreAchievedThisGame) { // Only trigger confetti if it hasn't been shown this game
+                this.triggerConfettiEffect();
+            }
+            newBestScoreAchievedThisGame = true; // Set flag *after* checking, so it's true for subsequent checks
             bestScore = score;
-            this.updateBestScore();
             localStorage.setItem('bestScore', bestScore.toString());
-            this.triggerConfettiEffect();
             if (bestScoreDisplay) bestScoreDisplay.classList.add('best-score-glow');
-            newBestScoreAchievedThisGame = true; // Set flag
         }
+        if (bestScoreDisplay) this.updateBestScore(); // Ensure best score display is always up-to-date
     },
 
     updateBestScore: function() {
@@ -521,14 +521,14 @@ const gameApi = {
 
         if ((event.metaKey || event.ctrlKey) && event.key === 'e') {
             event.preventDefault(); 
-            this.triggerConfettiEffect(); 
-
-            // Score manipulation removed based on user feedback.
-            // Visual effects and flag setting remain.
+            
+            if (!newBestScoreAchievedThisGame) { // Only trigger confetti if it hasn't been shown this game
+                this.triggerConfettiEffect();
+            }
+            newBestScoreAchievedThisGame = true; // Set flag *after* checking
             
             if (bestScoreDisplay) bestScoreDisplay.classList.add('best-score-glow'); 
             if (scoreDisplay) scoreDisplay.classList.add('current-score-glow');
-            newBestScoreAchievedThisGame = true; // Set flag for debug trigger
             return; 
         }
 
@@ -947,7 +947,6 @@ if (typeof document !== 'undefined') {
         gameApi.jsConfettiInstance = new JSConfetti(); 
         
         bestScore = localStorage.getItem('bestScore') ? parseInt(localStorage.getItem('bestScore')) : 0;
-        gameApi._resetModuleState({ bestScore: bestScore }); 
                                                   
         gameApi.setupGame(); 
 
