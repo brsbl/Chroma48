@@ -166,6 +166,11 @@ const gameApi = {
     },
 
     triggerConfettiEffect: function() {
+        // Only trigger confetti if a new best score was achieved this game
+        if (!newBestScoreAchievedThisGame) {
+            return;
+        }
+        
         if (this.jsConfettiInstance) {
             this.jsConfettiInstance.addConfetti({
                 emojis: ['🎉'],
@@ -647,10 +652,45 @@ const gameApi = {
             hexCodeDisplay.classList.add('hex-code');
             hexCodeDisplay.textContent = color.toUpperCase();
             swatch.appendChild(hexCodeDisplay);
-            swatch.addEventListener('click', () => {
+            swatch.addEventListener('click', (e) => {
                 settingsCurrentEditingSwatchIndex = index;
                 colorPickerInput.value = tempTileColors[index];
-                colorPickerInput.click();
+                // --- Overlay/focus trick for mobile ---
+                const isMobile = window.innerWidth <= 600 || /Mobi|Android/i.test(navigator.userAgent);
+                if (isMobile) {
+                    // Position the input over the swatch
+                    const swatchRect = swatch.getBoundingClientRect();
+                    colorPickerInput.style.position = 'fixed';
+                    colorPickerInput.style.left = swatchRect.left + 'px';
+                    colorPickerInput.style.top = swatchRect.top + 'px';
+                    colorPickerInput.style.width = swatchRect.width + 'px';
+                    colorPickerInput.style.height = swatchRect.height + 'px';
+                    colorPickerInput.style.opacity = '0';
+                    colorPickerInput.style.pointerEvents = 'auto';
+                    colorPickerInput.style.zIndex = '3000';
+                    colorPickerInput.style.display = 'block';
+                    // Focus and click
+                    colorPickerInput.focus();
+                    setTimeout(() => colorPickerInput.click(), 0);
+                    // After input, hide again
+                    const hideInput = () => {
+                        colorPickerInput.style.position = '';
+                        colorPickerInput.style.left = '';
+                        colorPickerInput.style.top = '';
+                        colorPickerInput.style.width = '';
+                        colorPickerInput.style.height = '';
+                        colorPickerInput.style.opacity = '';
+                        colorPickerInput.style.pointerEvents = '';
+                        colorPickerInput.style.zIndex = '';
+                        colorPickerInput.style.display = '';
+                        colorPickerInput.removeEventListener('input', hideInput);
+                        colorPickerInput.removeEventListener('blur', hideInput);
+                    };
+                    colorPickerInput.addEventListener('input', hideInput);
+                    colorPickerInput.addEventListener('blur', hideInput);
+                } else {
+                    colorPickerInput.click();
+                }
             });
             settingsColorPaletteGrid.appendChild(swatch);
         });
@@ -892,6 +932,11 @@ const gameApi = {
         if (messageContainer) {
             messageContainer.style.display = 'flex';
         }
+    },
+
+    // Expose setter for testability
+    setNewBestScoreAchievedThisGame: function(flag) {
+        newBestScoreAchievedThisGame = flag;
     }
 };
 // --- End gameApi Object Definition ---

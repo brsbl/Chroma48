@@ -1056,3 +1056,12 @@ body.instructions-modal-mode-active .game-explanation-footer > .modal-header {
     line-height: 1; /* Ensure consistent vertical alignment */
     text-transform: uppercase;
 }
+
+#color-picker-input {
+    opacity: 0;
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+}
