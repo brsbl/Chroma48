@@ -677,29 +677,56 @@ describe('createTileElement', () => {
     let gridContainerElement;
     const mockTileObject = { value: 2, color: '#FF0000' };
     const mockRow = 1, mockCol = 2;
-    const mockCellSize = 60;
-    const mockCellGap = 10;
+    // These are for assertion, assuming createBackgroundGrid will lead to these if DOM is set up right
+    const expectedTestCellSize = 60; 
+    const expectedTestCellGap = 10;
 
     beforeEach(() => {
-        document.body.innerHTML = '<div id="grid-container"><div class="grid-cell"></div></div>'; 
+        document.body.innerHTML = '<div id="grid-container"></div>'; // Start with an empty grid container
         gridContainerElement = document.getElementById('grid-container');
-        game._initializeDOMElements();
-        game._resetModuleState({ isColorMode: false });
-        jest.spyOn(window, 'getComputedStyle').mockReturnValue({
-            getPropertyValue: (prop) => {
-                if (prop === '--gap-grid') return `${mockCellGap}px`;
-                if (prop === '--size-grid-cell') return `${mockCellSize}px`;
-                return '0px';
+        game._initializeDOMElements(); // gridContainer is now known to game
+        game._resetModuleState({ GRID_SIZE: 4, isColorMode: false }); // Added isColorMode for safety
+
+        // Mock getComputedStyle for --gap-grid (this should be fine)
+        const originalGetComputedStyle = window.getComputedStyle;
+        window.getComputedStyle = (elt) => {
+            const style = originalGetComputedStyle(elt);
+            if (elt === document.documentElement) {
+                return {
+                    ...style,
+                    getPropertyValue: (prop) => {
+                        if (prop === '--gap-grid') return `${expectedTestCellGap}px`;
+                        return style.getPropertyValue(prop);
+                    }
+                };
+            }
+            return style;
+        };
+
+        // Temporarily redefine HTMLElement.prototype.offsetWidth for .grid-cell elements
+        const originalOffsetWidthDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+            configurable: true,
+            get: function() {
+                // Check if 'this' is an HTMLElement and has classList (safer for JSDOM)
+                if (typeof this.classList !== 'undefined' && this.classList.contains('grid-cell')) {
+                    return expectedTestCellSize;
+                }
+                // Fallback to original behavior or JSDOM default (0)
+                return originalOffsetWidthDescriptor && originalOffsetWidthDescriptor.get ? originalOffsetWidthDescriptor.get.call(this) : 0;
             }
         });
-        const firstCell = gridContainerElement.querySelector('.grid-cell');
-        if (firstCell) {
-            Object.defineProperty(firstCell, 'offsetWidth', { configurable: true, value: mockCellSize });
-        }
-    });
 
-    afterEach(() => {
-        jest.restoreAllMocks(); 
+        game.createBackgroundGrid(); // This should now use the mocked offsetWidth for its new cells
+
+        // Restore original offsetWidth behavior
+        if (originalOffsetWidthDescriptor) {
+            Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidthDescriptor);
+        } else {
+            delete HTMLElement.prototype.offsetWidth; // If it wasn't there before (unlikely for offsetWidth)
+        }
+        
+        window.getComputedStyle = originalGetComputedStyle; // Restore
     });
 
     test('should return null if gridContainer is not available in the game module', () => {
@@ -716,40 +743,17 @@ describe('createTileElement', () => {
         expect(tileElement).not.toBeNull();
         expect(tileElement.tagName).toBe('DIV');
         expect(tileElement.classList.contains('tile')).toBe(true);
+        expect(tileElement.classList.length).toBe(1); // Should only have 'tile' initially
     });
 
-    test('should add value-specific class name', () => {
-        const tile2 = game.createTileElement({ value: 2, color: 'red' }, 0, 0);
-        expect(tile2.classList.contains('tile-2')).toBe(true);
-        const tile2048 = game.createTileElement({ value: 2048, color: 'blue' }, 0, 0);
-        expect(tile2048.classList.contains('tile-2048')).toBe(true);
-        const tile4096 = game.createTileElement({ value: 4096, color: 'green' }, 0, 0);
-        expect(tile4096.classList.contains('tile-super')).toBe(true);
-    });
+    // Specific value/text/color tests moved to updateTileElement tests
 
-    test('should set textContent to value in Number Mode', () => {
-        game._resetModuleState({ isColorMode: false });
+    test('should correctly set width, height, top, and left styles using cached sizes', () => {
         const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
-        expect(tileElement.textContent).toBe(mockTileObject.value.toString());
-    });
-
-    test('should set empty textContent in Color Mode', () => {
-        game._resetModuleState({ isColorMode: true });
-        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
-        expect(tileElement.textContent).toBe('');
-    });
-
-    test('should set background color from tileObject', () => {
-        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
-        expect(tileElement.style.backgroundColor).toBe('rgb(255, 0, 0)'); 
-    });
-
-    test('should correctly set width, height, top, and left styles', () => {
-        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
-        expect(tileElement.style.width).toBe(`${mockCellSize}px`);
-        expect(tileElement.style.height).toBe(`${mockCellSize}px`);
-        const expectedTop = mockRow * (mockCellSize + mockCellGap);
-        const expectedLeft = mockCol * (mockCellSize + mockCellGap);
+        expect(tileElement.style.width).toBe(`${expectedTestCellSize}px`);
+        expect(tileElement.style.height).toBe(`${expectedTestCellSize}px`);
+        const expectedTop = mockRow * (expectedTestCellSize + expectedTestCellGap);
+        const expectedLeft = mockCol * (expectedTestCellSize + expectedTestCellGap);
         expect(tileElement.style.top).toBe(`${expectedTop}px`);
         expect(tileElement.style.left).toBe(`${expectedLeft}px`);
     });
@@ -758,35 +762,166 @@ describe('createTileElement', () => {
         const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
         expect(gridContainerElement.contains(tileElement)).toBe(true);
     });
+});
 
-    test('should use fallback --size-grid-cell if .grid-cell offsetWidth is not available', () => {
-        gridContainerElement.innerHTML = ''; 
-        game._initializeDOMElements(); 
-        const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
-        expect(tileElement.style.width).toBe(`${mockCellSize}px`); 
+describe('updateTileElement', () => {
+    let tileDOM, gridContainerElement;
+    const initialTileData = { value: 2, color: '#FF0000' };
+
+    beforeEach(() => {
+        document.body.innerHTML = '<div id="grid-container"></div>';
+        gridContainerElement = document.getElementById('grid-container');
+        game._initializeDOMElements();
+        game._resetModuleState({ isColorMode: false }); 
+        tileDOM = document.createElement('div'); // Create a bare div to be updated
+        // tileDOM needs to be in the document for some classList checks if they rely on live collections or specific parentage
+        gridContainerElement.appendChild(tileDOM); 
+    });
+
+    afterEach(() => {
+        jest.clearAllTimers();
+        gridContainerElement.innerHTML = ''; // Clean up
+    });
+
+    test('should remove tileDOM from parent if tileData is null', () => {
+        game.updateTileElement(tileDOM, null, false);
+        expect(tileDOM.parentNode).toBeNull();
+    });
+
+    test('should return null if tileData is null', () => {
+        expect(game.updateTileElement(tileDOM, null, false)).toBeNull();
+    });
+
+    test('should add value-specific class name (e.g., tile-2, tile-super)', () => {
+        game.updateTileElement(tileDOM, { value: 2, color: 'red' }, false);
+        expect(tileDOM.classList.contains('tile-2')).toBe(true);
+        game.updateTileElement(tileDOM, { value: 2048, color: 'blue' }, false);
+        expect(tileDOM.classList.contains('tile-2048')).toBe(true);
+        game.updateTileElement(tileDOM, { value: 4096, color: 'green' }, false);
+        expect(tileDOM.classList.contains('tile-super')).toBe(true);
+    });
+
+    test('should set textContent to value in Number Mode', () => {
+        game._resetModuleState({ isColorMode: false });
+        game.updateTileElement(tileDOM, initialTileData, false);
+        expect(tileDOM.textContent).toBe(initialTileData.value.toString());
+    });
+
+    test('should set empty textContent in Color Mode', () => {
+        game._resetModuleState({ isColorMode: true });
+        game.updateTileElement(tileDOM, initialTileData, false);
+        expect(tileDOM.textContent).toBe('');
+    });
+
+    test('should set background color from tileData', () => {
+        game.updateTileElement(tileDOM, initialTileData, false);
+        expect(tileDOM.style.backgroundColor).toBe('rgb(255, 0, 0)');
+    });
+
+    test('should add tile-just-merged class if tileData.isNewlyMerged is true and remove it after timeout', () => {
+        jest.useFakeTimers();
+        const mergedTileData = { ...initialTileData, isNewlyMerged: true };
+        game.updateTileElement(tileDOM, mergedTileData, false);
+        expect(tileDOM.classList.contains('tile-just-merged')).toBe(true);
+        jest.advanceTimersByTime(149);
+        expect(tileDOM.classList.contains('tile-just-merged')).toBe(true); // Still there
+        jest.advanceTimersByTime(1); // Total 150ms
+        expect(tileDOM.classList.contains('tile-just-merged')).toBe(false); // Should be removed
+        expect(mergedTileData.isNewlyMerged).toBeUndefined(); // Flag should be deleted
+        jest.useRealTimers();
+    });
+
+    test('should not add tile-just-merged class if tileData.isNewlyMerged is false or undefined', () => {
+        game.updateTileElement(tileDOM, initialTileData, false);
+        expect(tileDOM.classList.contains('tile-just-merged')).toBe(false);
     });
 });
 
 describe('drawGrid', () => {
     let gridContainerElement;
-    let createTileElementSpy;
+    let updateTileElementSpy; 
+    const gridSize = 2; // For simpler grid state in these specific tests
 
     beforeEach(() => {
         document.body.innerHTML = '<div id="grid-container"></div>';
         gridContainerElement = document.getElementById('grid-container');
         game._initializeDOMElements();
         game._resetModuleState({
-            grid: [
-                [{ value: 2, color: 'red' }, null],
-                [null, { value: 4, color: 'blue' }]
-            ],
-            GRID_SIZE: 2 
+            grid: Array(gridSize).fill(null).map(() => Array(gridSize).fill(null)),
+            GRID_SIZE: gridSize,
+            isColorMode: false, // Added for safety, affects updateTileElement
         });
-        createTileElementSpy = jest.spyOn(game, 'createTileElement').mockImplementation(() => document.createElement('div')); 
+
+        const expectedTestCellSize = 60; 
+        const expectedTestCellGap = 10;
+
+        // Mock getComputedStyle for --gap-grid
+        const originalGetComputedStyle = window.getComputedStyle;
+        window.getComputedStyle = (elt) => {
+            const style = originalGetComputedStyle(elt);
+            if (elt === document.documentElement) {
+                return {
+                    ...style,
+                    getPropertyValue: (prop) => {
+                        if (prop === '--gap-grid') return `${expectedTestCellGap}px`;
+                        return style.getPropertyValue(prop);
+                    }
+                };
+            }
+            return style;
+        };
+
+        // Temporarily redefine HTMLElement.prototype.offsetWidth for .grid-cell elements
+        const originalOffsetWidthDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+            configurable: true,
+            get: function() {
+                if (typeof this.classList !== 'undefined' && this.classList.contains('grid-cell')) {
+                    return expectedTestCellSize;
+                }
+                return originalOffsetWidthDescriptor && originalOffsetWidthDescriptor.get ? originalOffsetWidthDescriptor.get.call(this) : 0;
+            }
+        });
+
+        game.createBackgroundGrid(); // This initializes tileDOMElements and calculates currentCellSize
+
+        // Restore original offsetWidth behavior
+        if (originalOffsetWidthDescriptor) {
+            Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidthDescriptor);
+        } else {
+            delete HTMLElement.prototype.offsetWidth;
+        }
+        window.getComputedStyle = originalGetComputedStyle; // Restore
+
+        updateTileElementSpy = jest.spyOn(game, 'updateTileElement').mockImplementation((tileDOM, tileData, isNew) => {
+            if (tileDOM && !tileData) { 
+                if (tileDOM.parentNode) tileDOM.parentNode.removeChild(tileDOM);
+                return null; 
+            }
+            if (tileDOM && tileData) {
+                tileDOM.dataset.value = tileData.value; 
+                // Simulate basic classing for tests that might check it indirectly
+                tileDOM.className = 'tile'; // Reset classes
+                if (tileData.value) tileDOM.classList.add(`tile-${tileData.value}`);
+                if (tileData.isNewlyMerged) tileDOM.classList.add('tile-just-merged');
+
+                // Simulate style application for color mode if necessary
+                if (game.getGameState().isColorMode) {
+                    tileDOM.style.backgroundColor = tileData.color || '';
+                    tileDOM.textContent = '';
+                } else {
+                    tileDOM.style.backgroundColor = tileData.color || ''; // Still set color
+                    tileDOM.textContent = tileData.value ? tileData.value.toString() : '';
+                }
+                return tileDOM;
+            }
+            return tileDOM; 
+        }); 
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
+        gridContainerElement.innerHTML = '';
     });
 
     test('should return early if gridContainer is not available in the game module', () => {
@@ -794,39 +929,71 @@ describe('drawGrid', () => {
         document.getElementById = (id) => (id === 'grid-container' ? null : tempGetElementById.call(document, id));
         game._initializeDOMElements(); 
         game.drawGrid();
-        expect(createTileElementSpy).not.toHaveBeenCalled(); 
+        expect(updateTileElementSpy).not.toHaveBeenCalled(); 
         document.getElementById = tempGetElementById; 
         game._initializeDOMElements(); 
     });
 
-    test('should remove existing tile elements from gridContainer', () => {
-        const oldTile = document.createElement('div');
-        oldTile.classList.add('tile');
-        gridContainerElement.appendChild(oldTile); 
-        game.drawGrid(); 
-        expect(oldTile.parentElement).toBeNull(); 
+    test('should remove tile DOM elements if they exist in cache but not in grid data', () => {
+        const r = 0, c = 0;
+        const initialData = { value: 2, color: 'red' };
+        game.getGameState().grid[r][c] = initialData;
+        game.drawGrid(); // First draw to create the tile and cache it
+        
+        const createdTileDOM = game.getGameState().tileDOMElements[r][c]; // Get ref to the *actual* cached DOM element
+        expect(createdTileDOM).not.toBeNull();
+        expect(gridContainerElement.contains(createdTileDOM)).toBe(true);
+
+        game.getGameState().grid[r][c] = null; // Now remove data
+        updateTileElementSpy.mockClear(); // Clear spy before second draw
+        game.drawGrid(); // Second draw should remove it
+
+        expect(updateTileElementSpy).toHaveBeenCalledWith(createdTileDOM, null, expect.anything());
+        expect(game.getGameState().tileDOMElements[r][c]).toBeNull(); 
+        expect(gridContainerElement.contains(createdTileDOM)).toBe(false);
     });
 
-    test('should create new tiles for non-null cells in the grid', () => {
-        const testGrid = [
+    test('should call updateTileElement for non-null cells in the grid (creating or updating DOM)', () => {
+        const testGridData = [
             [{value: 2, color: 'red'}, null],
             [null, {value: 4, color: 'blue'}]
         ];
-        game._resetModuleState({ grid: testGrid, GRID_SIZE: 2 });
-        createTileElementSpy.mockClear(); // Clear before test
+        game._resetModuleState({ 
+            ...game.getGameState(), 
+            grid: testGridData, 
+            GRID_SIZE: gridSize // gridSize is 2 from beforeEach
+            // tileDOMElements will be initialized by createBackgroundGrid called in beforeEach
+        });
+        // Ensure createBackgroundGrid is called again if GRID_SIZE changed in _resetModuleState, 
+        // or ensure it was called with correct gridSize in the main beforeEach.
+        // The main beforeEach for drawGrid already calls createBackgroundGrid with gridSize=2.
+
+        updateTileElementSpy.mockClear(); 
         game.drawGrid();
-        expect(createTileElementSpy).toHaveBeenCalledTimes(2); // Assert calls to the spy
+
+        expect(updateTileElementSpy).toHaveBeenCalledTimes(2); 
+        expect(updateTileElementSpy).toHaveBeenCalledWith(expect.any(HTMLElement), testGridData[0][0], true);
+        expect(updateTileElementSpy).toHaveBeenCalledWith(expect.any(HTMLElement), testGridData[1][1], true);
+        expect(game.getGameState().tileDOMElements[0][0]).not.toBeNull();
+        expect(game.getGameState().tileDOMElements[1][1]).not.toBeNull();
     });
 
-    test('should not create tiles for null cells', () => {
-        const testGrid = [
-            [null, null],
-            [null, null]
-        ];
-        game._resetModuleState({ grid: testGrid, GRID_SIZE: 2 });
-        createTileElementSpy.mockClear(); // Clear before test
-        game.drawGrid();
-        expect(createTileElementSpy).not.toHaveBeenCalled(); // Assert no calls if all null
+    test('should correctly position and update existing tiles', () => {
+        const r = 0, c = 0;
+        const initialTileData = { value: 2, color: 'red' };
+        game.getGameState().grid[r][c] = initialTileData;
+        game.drawGrid(); // First draw: creates and caches tileDOM
+        
+        const existingTileDOM = game.getGameState().tileDOMElements[r][c];
+        expect(existingTileDOM).not.toBeNull();
+        
+        const updatedTileData = { value: 4, color: 'blue' };
+        game.getGameState().grid[r][c] = updatedTileData; // Update data for existing tile
+
+        updateTileElementSpy.mockClear();
+        game.drawGrid(); // Second draw: should update existing tileDOM
+
+        expect(updateTileElementSpy).toHaveBeenCalledWith(existingTileDOM, updatedTileData, false);
     });
 }); 
 
