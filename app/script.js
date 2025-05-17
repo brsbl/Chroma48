@@ -123,7 +123,7 @@ const gameApi = {
 
     setupGame: function() {
         isPaused = false;
-        if(pauseButton) pauseButton.innerHTML = '<img src="icons/pause.png" alt="Pause" class="button-icon">Pause';
+        if(pauseButton) pauseButton.innerHTML = '<img src="icons/Pause.png" alt="Pause" class="button-icon">Pause';
         if(messageContainer) {
             if (messageContainer.querySelector('p')) messageContainer.querySelector('p').textContent = '';
             messageContainer.style.display = 'none';
@@ -848,7 +848,7 @@ const gameApi = {
         settingsCurrentEditingSwatchIndex = initialTestState.settingsCurrentEditingSwatchIndex !== undefined ? initialTestState.settingsCurrentEditingSwatchIndex : -1;
         if (scoreDisplay) scoreDisplay.textContent = score.toLocaleString();
         if (bestScoreDisplay) bestScoreDisplay.textContent = bestScore.toLocaleString();
-        if (pauseButton) pauseButton.innerHTML = '<img src="icons/pause.png" alt="Pause" class="button-icon">Pause';
+        if (pauseButton) pauseButton.innerHTML = '<img src="icons/Pause.png" alt="Pause" class="button-icon">Pause';
         if (messageContainer) {
             if (messageContainer.querySelector('p')) messageContainer.querySelector('p').textContent = '';
             messageContainer.style.display = 'none';
