@@ -20,7 +20,8 @@ let isPaused = false;
 let currentColorIndex = 0;
 let isColorMode = false;
 let isModalActive = false;
-let newBestScoreAchievedThisGame = false; // New flag
+let newBestScoreAchievedThisGame = false;
+let sessionBestScore = 0;
 
 // DOM Element Variables - to be assigned in _initializeDOMElements
 let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContainer,
@@ -135,7 +136,8 @@ const gameApi = {
         this.updateScore(0); 
         if (bestScoreDisplay) bestScoreDisplay.classList.remove('best-score-glow');
         if (scoreDisplay) scoreDisplay.classList.remove('current-score-glow');
-        newBestScoreAchievedThisGame = false; // Reset flag
+        newBestScoreAchievedThisGame = false; // Reset flag at the start of each session
+        sessionBestScore = parseInt(localStorage.getItem('bestScore') || '0', 10); // Store session best
         grid = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
         
         if (gridContainer) {
@@ -166,18 +168,16 @@ const gameApi = {
     },
 
     triggerConfettiEffect: function() {
-        // Only trigger confetti if a new best score was achieved this game
-        if (!newBestScoreAchievedThisGame) {
-            return;
-        }
-        
-        if (this.jsConfettiInstance) {
-            this.jsConfettiInstance.addConfetti({
-                emojis: ['🎉'],
-                confettiNumber: 150,
-                emojiSize: 24,
-                confettiRadius: 60,
-            });
+        if (newBestScoreAchievedThisGame) {
+            if (this.jsConfettiInstance) {
+                this.jsConfettiInstance.addConfetti({
+                    emojis: ['🎉'],
+                    confettiNumber: 150,
+                    emojiSize: 24,
+                    confettiRadius: 60,
+                });
+            }
+            // Do NOT reset the flag here; let it stay true for the rest of the session
         }
     },
 
@@ -191,13 +191,20 @@ const gameApi = {
             score += newPoints;
         }
         if (scoreDisplay) scoreDisplay.textContent = score.toLocaleString();
-        if (score > bestScore) {
+        // Only set the flag and trigger confetti if this is the first time in this session
+        if (!newBestScoreAchievedThisGame && score > sessionBestScore) {
+            newBestScoreAchievedThisGame = true;
             bestScore = score;
             this.updateBestScore();
             localStorage.setItem('bestScore', bestScore.toString());
-            this.triggerConfettiEffect();
             if (bestScoreDisplay) bestScoreDisplay.classList.add('best-score-glow');
-            newBestScoreAchievedThisGame = true; // Set flag
+            this.triggerConfettiEffect();
+        } else if (score > bestScore) {
+            // Update bestScore in memory if needed (but don't trigger confetti again)
+            bestScore = score;
+            this.updateBestScore();
+            localStorage.setItem('bestScore', bestScore.toString());
+            if (bestScoreDisplay) bestScoreDisplay.classList.add('best-score-glow');
         }
     },
 
