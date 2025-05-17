@@ -167,8 +167,8 @@ main {
     flex: 1; /* Allow boxes to grow and shrink equally */
     /* Add a smaller min-width just to prevent extreme collapse if numbers are very small */
     min-width: 60px; 
-    position: relative; /* Added for positioning emojis */
-    overflow: visible; /* Allow emojis to float slightly outside */
+    /* position: relative; --- Removed, no longer needed for this */
+    /* overflow: visible; --- Removed, no longer needed for this */
 }
 
 .score-box div, .best-box div {
@@ -1028,50 +1028,4 @@ body.instructions-modal-mode-active .game-explanation-footer > .modal-header {
     background-color: #C0C0C0; /* Slightly darker gray for secondary button hover */
 }
 
-/* New Best Score Emoji Styles */
-.new-best-score-indicator {
-    position: absolute;
-    bottom: 50%; /* Start near vertical middle */
-    font-size: 1.8em; /* Make emojis a bit larger */
-    opacity: 0;
-    /* Start slightly below and to the center of their final side position, and small */
-    transform: translateY(10px) scale(0.5);
-    /* No transition here, animation will handle it */
-    pointer-events: none; /* So they don't interfere with clicks */
-}
-
-.new-best-score-indicator.left {
-    left: -15px; /* Adjust as needed */
-}
-
-.new-best-score-indicator.right {
-    right: -15px; /* Adjust as needed */
-}
-
-.new-best-score-indicator.animate {
-    /* opacity is handled by animation */
-    /* transform is handled by animation */
-    animation: float-up-and-pop 1.2s ease-out forwards; /* forwards keeps the end state */
-}
-
-@keyframes float-up-and-pop {
-    0% {
-        opacity: 0;
-        transform: translateY(10px) scale(0.5); /* Start state: below, small, invisible */
-    }
-    40% {
-        opacity: 1;
-        transform: translateY(-25px) scale(1.2); /* Float up, grow, become visible */
-    }
-    70% { /* Peak of pop */
-        opacity: 1;
-        transform: translateY(-30px) scale(1.4) rotate(10deg); 
-    }
-    75% { /* Slight recoil for pop */
-        transform: translateY(-30px) scale(1.3) rotate(-5deg);
-    }
-    100% { /* Disappear */
-        opacity: 0;
-        transform: translateY(-40px) scale(0.5) rotate(0deg);
-    }
-}
+/* Old emoji animation styles removed */

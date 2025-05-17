@@ -19,6 +19,7 @@ let isPaused = false;
 let currentColorIndex = 0;
 let isColorMode = false;
 let isModalActive = false;
+let jsConfettiInstance = null; // Added for js-confetti
 
 // DOM Element Variables - to be assigned in _initializeDOMElements
 let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContainer,
@@ -27,7 +28,7 @@ let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContain
     settingsColorPaletteGrid, saveSettingsButton, cancelSettingsButton,
     colorPickerInput, paletteSuccessMessage,
     toggleButton, instructionsContent, collapsibleDrawer, 
-    closeInstructionsButton_collapsible, newBestScoreEmojiLeft, newBestScoreEmojiRight;
+    closeInstructionsButton_collapsible; // Removed newBestScoreEmojiLeft, newBestScoreEmojiRight
 
 let tempIsColorMode = false;
 let tempTileColors = [...TILE_COLORS_DEFAULT];
@@ -167,17 +168,13 @@ function updateScore(newPoints) {
         bestScore = score;
         updateBestScore();
         localStorage.setItem('bestScore', bestScore.toString());
-        [newBestScoreEmojiLeft, newBestScoreEmojiRight].forEach(emoji => {
-            if (emoji) {
-                emoji.classList.remove('animate'); // Reset if already animating
-                void emoji.offsetWidth; // Force reflow to restart animation
-                emoji.classList.add('animate');
-                // Remove the class after the animation completes so it can be re-triggered
-                setTimeout(() => {
-                    emoji.classList.remove('animate');
-                }, 1200); // Duration of the animation in ms
-            }
-        });
+        if (jsConfettiInstance) {
+            jsConfettiInstance.addConfetti({
+                emojis: ['🎉', '🌟', '💖'],
+                confettiNumber: 50,
+                emojiSize: 80
+            });
+        }
     }
 }
 
@@ -496,16 +493,13 @@ function handleUserKeyPress(event) {
     // Local debug: Command/Ctrl + E to trigger new best score animation
     if ((event.metaKey || event.ctrlKey) && event.key === 'e') {
         event.preventDefault(); // Prevent any default browser action for Ctrl/Cmd+E
-        [newBestScoreEmojiLeft, newBestScoreEmojiRight].forEach(emoji => {
-            if (emoji) {
-                emoji.classList.remove('animate'); 
-                void emoji.offsetWidth; 
-                emoji.classList.add('animate');
-                setTimeout(() => {
-                    emoji.classList.remove('animate');
-                }, 1200); // Duration of the animation in ms
-            }
-        });
+        if (jsConfettiInstance) {
+            jsConfettiInstance.addConfetti({
+                emojis: ['🎉', '✨'],
+                emojiSize: 100,
+                confettiNumber: 40,
+            });
+        }
         return; // Stop further processing for this debug command
     }
 
@@ -752,8 +746,6 @@ function _initializeDOMElements() {
     gridContainer = document.getElementById('grid-container');
     scoreDisplay = document.getElementById('score');
     bestScoreDisplay = document.getElementById('best-score');
-    newBestScoreEmojiLeft = document.getElementById('new-best-score-emoji-left');
-    newBestScoreEmojiRight = document.getElementById('new-best-score-emoji-right');
     messageContainer = document.getElementById('game-message');
     restartButton = document.getElementById('restart-button');
     tryAgainButton = document.getElementById('retry-button');
@@ -837,6 +829,7 @@ function _resetBoardAndScore() {
 if (typeof document !== 'undefined') { // Ensure this only runs in a browser-like environment
     document.addEventListener('DOMContentLoaded', () => {
         _initializeDOMElements();
+        jsConfettiInstance = new JSConfetti(); // Initialize js-confetti
         
         bestScore = localStorage.getItem('bestScore') ? parseInt(localStorage.getItem('bestScore')) : 0;
         _resetModuleState({ bestScore: bestScore }); // Initialize module state, including UI based on it.
