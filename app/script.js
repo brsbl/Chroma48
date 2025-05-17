@@ -27,7 +27,7 @@ let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContain
     settingsColorPaletteGrid, saveSettingsButton, cancelSettingsButton,
     colorPickerInput, paletteSuccessMessage,
     toggleButton, instructionsContent, collapsibleDrawer, 
-    closeInstructionsButton_collapsible, newBestScoreEmoji;
+    closeInstructionsButton_collapsible, newBestScoreEmojiLeft, newBestScoreEmojiRight;
 
 let tempIsColorMode = false;
 let tempTileColors = [...TILE_COLORS_DEFAULT];
@@ -167,13 +167,17 @@ function updateScore(newPoints) {
         bestScore = score;
         updateBestScore();
         localStorage.setItem('bestScore', bestScore.toString());
-        if (newBestScoreEmoji) {
-            newBestScoreEmoji.classList.add('animate');
-            // Remove the class after the animation completes so it can be re-triggered
-            setTimeout(() => {
-                newBestScoreEmoji.classList.remove('animate');
-            }, 800); // Duration of the animation in ms
-        }
+        [newBestScoreEmojiLeft, newBestScoreEmojiRight].forEach(emoji => {
+            if (emoji) {
+                emoji.classList.remove('animate'); // Reset if already animating
+                void emoji.offsetWidth; // Force reflow to restart animation
+                emoji.classList.add('animate');
+                // Remove the class after the animation completes so it can be re-triggered
+                setTimeout(() => {
+                    emoji.classList.remove('animate');
+                }, 1200); // Duration of the animation in ms
+            }
+        });
     }
 }
 
@@ -492,14 +496,16 @@ function handleUserKeyPress(event) {
     // Local debug: Command/Ctrl + E to trigger new best score animation
     if ((event.metaKey || event.ctrlKey) && event.key === 'e') {
         event.preventDefault(); // Prevent any default browser action for Ctrl/Cmd+E
-        if (newBestScoreEmoji) {
-            newBestScoreEmoji.classList.remove('animate'); // Remove first to reset if already animating
-            void newBestScoreEmoji.offsetWidth; // Trigger reflow to restart animation if already applied
-            newBestScoreEmoji.classList.add('animate');
-            setTimeout(() => {
-                newBestScoreEmoji.classList.remove('animate');
-            }, 800); // Duration of the animation in ms
-        }
+        [newBestScoreEmojiLeft, newBestScoreEmojiRight].forEach(emoji => {
+            if (emoji) {
+                emoji.classList.remove('animate'); 
+                void emoji.offsetWidth; 
+                emoji.classList.add('animate');
+                setTimeout(() => {
+                    emoji.classList.remove('animate');
+                }, 1200); // Duration of the animation in ms
+            }
+        });
         return; // Stop further processing for this debug command
     }
 
@@ -746,7 +752,8 @@ function _initializeDOMElements() {
     gridContainer = document.getElementById('grid-container');
     scoreDisplay = document.getElementById('score');
     bestScoreDisplay = document.getElementById('best-score');
-    newBestScoreEmoji = document.getElementById('new-best-score-emoji');
+    newBestScoreEmojiLeft = document.getElementById('new-best-score-emoji-left');
+    newBestScoreEmojiRight = document.getElementById('new-best-score-emoji-right');
     messageContainer = document.getElementById('game-message');
     restartButton = document.getElementById('restart-button');
     tryAgainButton = document.getElementById('retry-button');

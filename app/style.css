@@ -167,6 +167,8 @@ main {
     flex: 1; /* Allow boxes to grow and shrink equally */
     /* Add a smaller min-width just to prevent extreme collapse if numbers are very small */
     min-width: 60px; 
+    position: relative; /* Added for positioning emojis */
+    overflow: visible; /* Allow emojis to float slightly outside */
 }
 
 .score-box div, .best-box div {
@@ -1028,35 +1030,48 @@ body.instructions-modal-mode-active .game-explanation-footer > .modal-header {
 
 /* New Best Score Emoji Styles */
 .new-best-score-indicator {
-    display: inline-block;
-    margin-left: 5px;
-    font-size: 1em; /* Adjust as needed relative to surrounding text */
+    position: absolute;
+    bottom: 50%; /* Start near vertical middle */
+    font-size: 1.8em; /* Make emojis a bit larger */
     opacity: 0;
-    transform: scale(0.5);
-    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    /* Start slightly below and to the center of their final side position, and small */
+    transform: translateY(10px) scale(0.5);
+    /* No transition here, animation will handle it */
+    pointer-events: none; /* So they don't interfere with clicks */
+}
+
+.new-best-score-indicator.left {
+    left: -15px; /* Adjust as needed */
+}
+
+.new-best-score-indicator.right {
+    right: -15px; /* Adjust as needed */
 }
 
 .new-best-score-indicator.animate {
-    opacity: 1;
-    transform: scale(1);
-    animation: tada-animation 0.8s ease-out;
+    /* opacity is handled by animation */
+    /* transform is handled by animation */
+    animation: float-up-and-pop 1.2s ease-out forwards; /* forwards keeps the end state */
 }
 
-@keyframes tada-animation {
+@keyframes float-up-and-pop {
     0% {
-        transform: scale(1);
+        opacity: 0;
+        transform: translateY(10px) scale(0.5); /* Start state: below, small, invisible */
     }
-    10%, 20% {
-        transform: scale(0.9) rotate(-3deg);
+    40% {
+        opacity: 1;
+        transform: translateY(-25px) scale(1.2); /* Float up, grow, become visible */
     }
-    30%, 50%, 70%, 90% {
-        transform: scale(1.1) rotate(3deg);
+    70% { /* Peak of pop */
+        opacity: 1;
+        transform: translateY(-30px) scale(1.4) rotate(10deg); 
     }
-    40%, 60%, 80% {
-        transform: scale(1.1) rotate(-3deg);
+    75% { /* Slight recoil for pop */
+        transform: translateY(-30px) scale(1.3) rotate(-5deg);
     }
-    100% {
-        transform: scale(1) rotate(0);
-        opacity: 1; /* Ensure it's visible at the end */
+    100% { /* Disappear */
+        opacity: 0;
+        transform: translateY(-40px) scale(0.5) rotate(0deg);
     }
 }
