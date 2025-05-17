@@ -945,13 +945,16 @@ describe('Confetti Effect', () => {
         global.JSConfetti = jest.fn(() => mockJSConfettiInstance);
         
         // Initialize jsConfettiInstance on the game object (gameApi)
-        game.jsConfettiInstance = new JSConfetti(); 
+        game.jsConfettiInstance = new JSConfetti();
+        // Set the flag to true to allow confetti to trigger
+        game.setNewBestScoreAchievedThisGame(true);
     });
 
     afterEach(() => {
         jest.clearAllMocks();
         delete global.JSConfetti; // Clean up global mock
         game.jsConfettiInstance = null; // Reset for other tests
+        game.setNewBestScoreAchievedThisGame(false); // Reset the flag
     });
 
     test('triggerConfettiEffect should call addConfetti on the JSConfetti instance with default options', () => {
