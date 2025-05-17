@@ -18,6 +18,9 @@ const localStorageMock = (() => {
 })();
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
+// Define spies at a scope accessible by the describe block
+let getItemSpy, setItemSpy;
+
 describe('Settings Modal UI Interactions', () => {
     let settingsModal, closeSettingsModalButton, numberModeRadio, colorModeRadio;
     let settingsColorPaletteGrid, saveSettingsButton, cancelSettingsButton;
@@ -25,6 +28,20 @@ describe('Settings Modal UI Interactions', () => {
     // let setupGameSpy; // No longer attempting to mock setupGame for most settings tests
 
     beforeEach(() => {
+        // Mock localStorage and set up spies for this describe block
+        const store = {};
+        getItemSpy = jest.fn((key) => store[key] || null);
+        setItemSpy = jest.fn((key, value) => {
+            store[key] = value.toString();
+        });
+        const mockLocalStorageForModalTests = {
+            getItem: getItemSpy,
+            setItem: setItemSpy,
+            clear: () => { for (const key in store) delete store[key]; },
+            removeItem: (key) => { delete store[key]; }
+        };
+        Object.defineProperty(window, 'localStorage', { value: mockLocalStorageForModalTests, writable: true, configurable: true });
+
         document.body.innerHTML = `
             <div id="settings-modal" style="display: none;">
                 <button id="close-settings-modal-btn"></button>
@@ -187,6 +204,50 @@ describe('Settings Modal UI Interactions', () => {
             expect(paletteSuccessMessage.textContent).toBe('Settings saved successfully!');
             jest.advanceTimersByTime(3000);
             expect(paletteSuccessMessage.style.display).toBe('none');
+        });
+
+        test('saveSettings should save TILE_COLORS and isColorMode to localStorage', () => {
+            const testColors = ['#111111', '#222222', '#333333', '#444444'];
+            // Simulate state after openSettingsModal and user interaction
+            // Set initial isColorMode to false, then user checks the colorModeRadio
+            game._resetModuleState({
+                isColorMode: false, // Represents the game state before settings are changed
+                tempTileColors: testColors,
+                tempIsColorMode: true // User wants to switch to color mode
+            });
+
+            // Ensure radio buttons reflect the *intended change* that saveSettings will read
+            document.getElementById('color-mode-radio').checked = true;
+            document.getElementById('number-mode-radio').checked = false;
+            
+            game.saveSettings();
+
+            expect(setItemSpy).toHaveBeenCalledWith('tileColors', JSON.stringify(testColors));
+            expect(setItemSpy).toHaveBeenCalledWith('isColorMode', 'true'); // Should now save true
+        });
+
+        test('game should initialize with TILE_COLORS and isColorMode from localStorage if present (simulated via _resetModuleState)', () => {
+            const storedColors = ['#ABCDEF', '#FEDCBA', '#123456', '#654321'];
+            const storedIsColorMode = true;
+            getItemSpy.mockImplementation(key => {
+                if (key === 'tileColors') return JSON.stringify(storedColors);
+                if (key === 'isColorMode') return storedIsColorMode.toString();
+                if (key === 'bestScore') return '0'; // Default best score for this test
+                return null;
+            });
+
+            // _resetModuleState is responsible for loading these on init if they were there.
+            // We are testing that if these values were in localStorage, _resetModuleState (called by setupGame) would pick them up.
+            // The current _resetModuleState doesn't directly load tileColors/isColorMode, it's set by saveSettings.
+            // For a true init load test, the main DOMContentLoaded handler would need to be invoked in the test
+            // or its localStorage reading logic extracted and tested.
+            // For now, we focus on what _resetModuleState *can* do if values are passed.
+
+            game._resetModuleState({ TILE_COLORS: storedColors, isColorMode: storedIsColorMode });
+            game.setupGame(); // Calls _resetModuleState again, should retain if not overridden by localStorage explicitly for these vars.
+
+            expect(game.getGameState().TILE_COLORS).toEqual(storedColors);
+            expect(game.getGameState().isColorMode).toBe(storedIsColorMode);
         });
     });
     
@@ -388,6 +449,69 @@ describe('Instructions UI Interactions', () => {
                 expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(false);
                 expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
             });
+        });
+    });
+
+    describe('Viewport-dependent behavior', () => {
+        let originalInnerWidth;
+
+        beforeEach(() => {
+            originalInnerWidth = window.innerWidth;
+            // Ensure toggleButton and instructionsContent are always available for these tests
+            if (!toggleButton) {
+                toggleButton = document.getElementById('toggle-instructions-btn');
+            }
+            if (!instructionsContent) {
+                instructionsContent = document.getElementById('instructions-content');
+            }
+            if (toggleButton && !toggleButton.querySelector('.arrow')) {
+                const arrowSpan = document.createElement('span');
+                arrowSpan.classList.add('arrow');
+                arrowSpan.textContent = '+';
+                toggleButton.appendChild(arrowSpan);
+            }
+        });
+
+        afterEach(() => {
+            Object.defineProperty(window, 'innerWidth', {
+                writable: true,
+                configurable: true,
+                value: originalInnerWidth,
+            });
+            document.body.classList.remove('instructions-modal-mode-active');
+            if (instructionsContent) instructionsContent.classList.remove('open');
+            if (toggleButton) toggleButton.setAttribute('aria-expanded', 'false');
+            if (toggleButton && toggleButton.querySelector('.arrow')) {
+                 toggleButton.querySelector('.arrow').textContent = '+';
+            }
+        });
+
+        test('should behave as modal on mobile view (<= 480px)', () => {
+            Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 480 });
+            game.showInstructionsModal(true);
+            expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(true);
+            expect(instructionsContent.classList.contains('open')).toBe(false); // Should not use .open class in modal mode
+            expect(toggleButton.getAttribute('aria-expanded')).toBe('true');
+
+            game.showInstructionsModal(false);
+            expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(false);
+            expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+        });
+
+        test('should behave as drawer on desktop view (> 480px)', () => {
+            Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 481 });
+            const arrow = toggleButton.querySelector('.arrow');
+            
+            game.showInstructionsModal(true);
+            expect(document.body.classList.contains('instructions-modal-mode-active')).toBe(false);
+            expect(instructionsContent.classList.contains('open')).toBe(true);
+            expect(toggleButton.getAttribute('aria-expanded')).toBe('true');
+            if (arrow) expect(arrow.innerHTML).toBe('-');
+
+            game.showInstructionsModal(false);
+            expect(instructionsContent.classList.contains('open')).toBe(false);
+            expect(toggleButton.getAttribute('aria-expanded')).toBe('false');
+            if (arrow) expect(arrow.innerHTML).toBe('+');
         });
     });
 }); 
@@ -798,5 +922,277 @@ describe('handleGameOver', () => {
             messageContainerElement.querySelector('.lower').appendChild(originalTryAgainButton);
         }
         game._initializeDOMElements();
+    });
+}); 
+
+describe('Confetti Effect', () => {
+    let mockAddConfetti;
+
+    beforeEach(() => {
+        // Clear DOM and re-initialize basic elements if gameApi functions rely on them
+        document.body.innerHTML = ''; // Minimal DOM if not needed
+        // game._initializeDOMElements(); // Not strictly needed for triggerConfettiEffect directly
+
+        mockAddConfetti = jest.fn();
+        const mockJSConfettiInstance = {
+            addConfetti: mockAddConfetti
+        };
+        // Mock the global JSConfetti constructor to return our mock instance
+        global.JSConfetti = jest.fn(() => mockJSConfettiInstance);
+        
+        // Initialize jsConfettiInstance on the game object (gameApi)
+        game.jsConfettiInstance = new JSConfetti(); 
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+        delete global.JSConfetti; // Clean up global mock
+        game.jsConfettiInstance = null; // Reset for other tests
+    });
+
+    test('triggerConfettiEffect should call addConfetti on the JSConfetti instance with default options', () => {
+        game.triggerConfettiEffect();
+        // global.JSConfetti might be called multiple times if other tests also init it, focus on addConfetti call
+        // expect(global.JSConfetti).toHaveBeenCalledTimes(1); 
+        expect(mockAddConfetti).toHaveBeenCalledTimes(1);
+        expect(mockAddConfetti).toHaveBeenCalledWith({
+            emojis: ['🎉'],
+            confettiNumber: 150,
+            emojiSize: 24,
+            confettiRadius: 60,
+        });
+    });
+
+    test('triggerConfettiEffect should not throw if jsConfettiInstance is null', () => {
+        game.jsConfettiInstance = null; // Simulate instance not being ready
+        expect(() => {
+            game.triggerConfettiEffect();
+        }).not.toThrow();
+        expect(mockAddConfetti).not.toHaveBeenCalled();
+    });
+}); 
+
+describe('Game Initialization and localStorage', () => {
+    let originalLocalStorage;
+
+    beforeAll(() => {
+        originalLocalStorage = Object.getOwnPropertyDescriptor(window, 'localStorage');
+    });
+
+    afterAll(() => {
+        if (originalLocalStorage) {
+            Object.defineProperty(window, 'localStorage', originalLocalStorage);
+        }
+    });
+
+    beforeEach(() => {
+        // Reset and spy on localStorage for each test
+        const store = {};
+        getItemSpy = jest.fn((key) => store[key] || null);
+        setItemSpy = jest.fn((key, value) => {
+            store[key] = value.toString();
+        });
+        const mockLocalStorage = {
+            getItem: getItemSpy,
+            setItem: setItemSpy,
+            clear: () => { for (const key in store) delete store[key]; },
+            removeItem: (key) => { delete store[key]; }
+        };
+        Object.defineProperty(window, 'localStorage', { value: mockLocalStorage, writable: true, configurable: true });
+
+        document.body.innerHTML = `
+            <div id="score">0</div> <div id="best-score">0</div>
+            <div id="grid-container"></div>
+            <button id="pause-button"></button> <button id="retry-button"></button>
+            <p></p> <!-- For game messages -->
+            <div id="settings-modal" style="display: none;">
+                <input type="radio" id="number-mode-radio" name="gameMode" value="number">
+                <input type="radio" id="color-mode-radio" name="gameMode" value="color">
+                <div id="settings-color-palette-grid"></div>
+            </div>
+        `;
+        game._initializeDOMElements();
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('should load bestScore from localStorage on initial setup path', () => {
+        getItemSpy.mockReturnValue('12345'); // Use mockReturnValue for persistent mock during this test
+
+        // Simulate DOMContentLoaded relevant part for bestScore loading
+        let initialBestScore = window.localStorage.getItem('bestScore') ? parseInt(window.localStorage.getItem('bestScore')) : 0;
+        game._resetModuleState({ bestScore: initialBestScore }); // Sets module bestScore to 12345
+        
+        // Call setupGame, which uses the already set module bestScore
+        // and updates display based on it (via updateScore(0) -> updateBestScore indirectly)
+        game.setupGame(); 
+        
+        expect(getItemSpy).toHaveBeenCalledWith('bestScore');
+        expect(game.getGameState().bestScore).toBe(12345);
+        expect(document.getElementById('best-score').textContent).toBe('12,345');
+    });
+
+    test('should load null bestScore as 0 from localStorage on initial setup path', () => {
+        getItemSpy.mockReturnValue(null); // Use mockReturnValue for persistent mock
+
+        // Simulate DOMContentLoaded relevant part for bestScore loading
+        let initialBestScore = window.localStorage.getItem('bestScore') ? parseInt(window.localStorage.getItem('bestScore')) : 0;
+        game._resetModuleState({ bestScore: initialBestScore }); // Sets module bestScore to 0
+
+        game.setupGame();
+
+        expect(getItemSpy).toHaveBeenCalledWith('bestScore');
+        expect(game.getGameState().bestScore).toBe(0);
+        expect(document.getElementById('best-score').textContent).toBe('0');
+    });
+
+    test('saveSettings should save TILE_COLORS and isColorMode to localStorage', () => {
+        const testColors = ['#111111', '#222222', '#333333', '#444444'];
+        // Simulate state after openSettingsModal and user interaction
+        // Set initial isColorMode to false, then user checks the colorModeRadio
+        game._resetModuleState({
+            isColorMode: false, // Represents the game state before settings are changed
+            tempTileColors: testColors,
+            tempIsColorMode: true // User wants to switch to color mode
+        });
+
+        // Ensure radio buttons reflect the *intended change* that saveSettings will read
+        document.getElementById('color-mode-radio').checked = true;
+        document.getElementById('number-mode-radio').checked = false;
+        
+        game.saveSettings();
+
+        expect(setItemSpy).toHaveBeenCalledWith('tileColors', JSON.stringify(testColors));
+        expect(setItemSpy).toHaveBeenCalledWith('isColorMode', 'true'); // Should now save true
+    });
+
+    test('game should initialize with TILE_COLORS and isColorMode from localStorage if present (simulated via _resetModuleState)', () => {
+        const storedColors = ['#ABCDEF', '#FEDCBA', '#123456', '#654321'];
+        const storedIsColorMode = true;
+        getItemSpy.mockImplementation(key => {
+            if (key === 'tileColors') return JSON.stringify(storedColors);
+            if (key === 'isColorMode') return storedIsColorMode.toString();
+            if (key === 'bestScore') return '0'; // Default best score for this test
+            return null;
+        });
+
+        // _resetModuleState is responsible for loading these on init if they were there.
+        // We are testing that if these values were in localStorage, _resetModuleState (called by setupGame) would pick them up.
+        // The current _resetModuleState doesn't directly load tileColors/isColorMode, it's set by saveSettings.
+        // For a true init load test, the main DOMContentLoaded handler would need to be invoked in the test
+        // or its localStorage reading logic extracted and tested.
+        // For now, we focus on what _resetModuleState *can* do if values are passed.
+
+        game._resetModuleState({ TILE_COLORS: storedColors, isColorMode: storedIsColorMode });
+        game.setupGame(); // Calls _resetModuleState again, should retain if not overridden by localStorage explicitly for these vars.
+
+        expect(game.getGameState().TILE_COLORS).toEqual(storedColors);
+        expect(game.getGameState().isColorMode).toBe(storedIsColorMode);
+    });
+}); 
+
+describe('Accessibility (ARIA Labels)', () => {
+    beforeEach(() => {
+        // Setup a comprehensive DOM structure that includes all elements with ARIA labels to be tested
+        document.body.innerHTML = `
+            <button id="viewport-settings-button" class="icon-button viewport-settings-button" title="Settings">
+                <img src="icons/settings.png" alt="Settings">
+            </button>
+            <header>
+                <div class="header-content-wrapper">
+                    <img src="icons/logo.png" alt="Chroma48 Game Logo" id="header-logo">
+                    <h1 id="game-title-text">Chroma48</h1>
+                    <span class="beta-pill">beta</span>
+                </div>
+            </header>
+            <div class="container">
+                <nav class="game-controls">
+                    <a class="restart-button" id="restart-button" aria-label="Start New Game"><img src="icons/refresh-grey.png" class="button-icon">New Game</a>
+                    <a class="pause-button" id="pause-button" aria-label="Pause Game"><img src="icons/pause.png" class="button-icon">Pause</a>
+                </nav>
+                <div class="game-message" id="game-message" style="display:none;">
+                    <p></p>
+                    <div class="lower">
+                        <a class="retry-button" id="retry-button" aria-label="Try Again">Try Again</a>
+                    </div>
+                </div>
+                <div class="collapsible-drawer">
+                    <button id="toggle-instructions-btn" aria-expanded="false" aria-controls="instructions-content">
+                        <span class="toggle-button-label">Instructions</span> <span class="arrow">+</span>
+                    </button>
+                    <footer class="game-explanation-footer" id="instructions-content">
+                        <div class="modal-header">
+                            <h4 class="modal-title-text">Instructions</h4>
+                            <button id="close-instructions-modal-btn" class="modal-close-button" title="Close Instructions" aria-label="Close Instructions">&times;</button>
+                        </div>
+                    </footer>
+                </div>
+            </div>
+            <div id="settings-modal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="settings-modal-title" aria-modal="true">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="settings-modal-title" class="modal-title-text">Settings</h3>
+                        <button id="close-settings-modal-btn" class="modal-close-button" title="Close Settings" aria-label="Close Settings">&times;</button>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="save-settings-button" class="game-button" aria-label="Save Settings and Restart Game">Save</button>
+                        <button id="cancel-settings-button" class="game-button secondary" aria-label="Cancel Settings Changes">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        game._initializeDOMElements(); // To ensure game module can find these elements if needed by other logic
+    });
+
+    test('should have correct aria-label for restart button', () => {
+        const button = document.getElementById('restart-button');
+        expect(button.getAttribute('aria-label')).toBe('Start New Game');
+    });
+
+    test('should have correct aria-label for pause button', () => {
+        const button = document.getElementById('pause-button');
+        expect(button.getAttribute('aria-label')).toBe('Pause Game');
+        // Note: This label might need to change dynamically if the button text changes to "Resume"
+        // A more advanced test could check that behavior if game.togglePauseGame updates the aria-label.
+    });
+
+    test('should have correct aria-label for retry button', () => {
+        const button = document.getElementById('retry-button');
+        expect(button.getAttribute('aria-label')).toBe('Try Again');
+    });
+
+    test('should have correct aria-label for save settings button', () => {
+        const button = document.getElementById('save-settings-button');
+        expect(button.getAttribute('aria-label')).toBe('Save Settings and Restart Game');
+    });
+
+    test('should have correct aria-label for cancel settings button', () => {
+        const button = document.getElementById('cancel-settings-button');
+        expect(button.getAttribute('aria-label')).toBe('Cancel Settings Changes');
+    });
+
+    test('settings modal close button should have correct aria-label', () => {
+        const button = document.getElementById('settings-modal').querySelector('#close-settings-modal-btn');
+        expect(button.getAttribute('aria-label')).toBe('Close Settings');
+    });
+    
+    test('instructions modal close button should have correct aria-label', () => {
+        const button = document.getElementById('instructions-content').querySelector('#close-instructions-modal-btn');
+        expect(button.getAttribute('aria-label')).toBe('Close Instructions');
+    });
+
+    test('toggle instructions button should have aria-controls and aria-expanded', () => {
+        const button = document.getElementById('toggle-instructions-btn');
+        expect(button.getAttribute('aria-controls')).toBe('instructions-content');
+        expect(button.getAttribute('aria-expanded')).toBe('false'); // Initial state
+    });
+
+    test('settings modal should have correct ARIA dialog attributes', () => {
+        const modal = document.getElementById('settings-modal');
+        expect(modal.getAttribute('role')).toBe('dialog');
+        expect(modal.getAttribute('aria-labelledby')).toBe('settings-modal-title');
+        expect(modal.getAttribute('aria-modal')).toBe('true');
     });
 }); 

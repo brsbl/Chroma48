@@ -20,7 +20,6 @@ let isPaused = false;
 let currentColorIndex = 0;
 let isColorMode = false;
 let isModalActive = false;
-let jsConfettiInstance = null; // Added for js-confetti
 let newBestScoreAchievedThisGame = false; // New flag
 
 // DOM Element Variables - to be assigned in _initializeDOMElements
@@ -38,6 +37,7 @@ let settingsCurrentEditingSwatchIndex = -1;
 
 // --- Start gameApi Object Definition ---
 const gameApi = {
+    jsConfettiInstance: null, // Added as a property
     // --- Color Conversion and Mixing Helpers ---
     hexToRgb: function(hex) {
         let r = 0, g = 0, b = 0;
@@ -166,12 +166,12 @@ const gameApi = {
     },
 
     triggerConfettiEffect: function() {
-        if (jsConfettiInstance) {
-            jsConfettiInstance.addConfetti({
+        if (this.jsConfettiInstance) {
+            this.jsConfettiInstance.addConfetti({
                 emojis: ['🎉'],
                 confettiNumber: 150,
                 emojiSize: 24,
-                confettiRadius: 60,            
+                confettiRadius: 60,
             });
         }
     },
@@ -899,7 +899,7 @@ const gameApi = {
 if (typeof document !== 'undefined') { 
     document.addEventListener('DOMContentLoaded', () => {
         gameApi._initializeDOMElements();
-        jsConfettiInstance = new JSConfetti(); 
+        gameApi.jsConfettiInstance = new JSConfetti(); 
         
         bestScore = localStorage.getItem('bestScore') ? parseInt(localStorage.getItem('bestScore')) : 0;
         gameApi._resetModuleState({ bestScore: bestScore }); 

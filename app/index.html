@@ -26,15 +26,15 @@
                 </div>
             </section>
             <nav class="game-controls">
-                <a class="restart-button" id="restart-button"><img src="icons/refresh-grey.png" alt="New Game" class="button-icon">New Game</a>
-                <a class="pause-button" id="pause-button"><img src="icons/pause.png" alt="Pause" class="button-icon">Pause</a>
+                <a class="restart-button" id="restart-button" aria-label="Start New Game"><img src="icons/refresh-grey.png" alt="New Game" class="button-icon">New Game</a>
+                <a class="pause-button" id="pause-button" aria-label="Pause Game"><img src="icons/pause.png" alt="Pause" class="button-icon">Pause</a>
             </nav>
             <section class="game-board-area">
                 <div class="game-container">
                     <div class="game-message" id="game-message">
                         <p></p>
                         <div class="lower">
-                            <a class="retry-button" id="retry-button">Try Again</a>
+                            <a class="retry-button" id="retry-button" aria-label="Try Again">Try Again</a>
                         </div>
                     </div>
                     <div class="grid-container" id="grid-container">
@@ -102,8 +102,8 @@
                 </section>
             </div>
             <div class="modal-footer">
-                <button id="save-settings-button" class="game-button">Save</button>
-                <button id="cancel-settings-button" class="game-button secondary">Cancel</button>
+                <button id="save-settings-button" class="game-button" aria-label="Save Settings and Restart Game">Save</button>
+                <button id="cancel-settings-button" class="game-button secondary" aria-label="Cancel Settings Changes">Cancel</button>
             </div>
         </div>
     </div>
