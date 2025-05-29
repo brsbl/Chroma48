@@ -322,11 +322,7 @@ main {
 
 /* Tile Styling */
 .tile {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--size-grid-cell);
-    height: var(--size-grid-cell);
+    /* Use CSS Grid positioning instead of absolute positioning */
     border-radius: var(--radius-grid); /* Consistent radius */
     display: flex;
     justify-content: center;
@@ -341,8 +337,7 @@ main {
     border: 3px solid var(--color-border-gridcell);
     /* Simplified single box shadow for better performance */
     box-shadow: 0 2px 4px var(--color-shadow-dark-soft);
-    transition: background-color 0.1s ease-in-out, transform 0.1s linear;
-    will-change: transform;
+    transition: background-color 0.1s ease-in-out;
     z-index: 10;
 }
 

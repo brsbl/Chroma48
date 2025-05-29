@@ -684,8 +684,6 @@ describe('ensureTileElement', () => {
     let gridContainerElement;
     const mockTileObject = { value: 2, color: '#FF5733' };
     const mockRow = 1, mockCol = 2;
-    const expectedTestCellSize = 60; 
-    const expectedTestCellGap = 10;
 
     beforeEach(() => {
         document.body.innerHTML = '<div id="grid-container"></div>';
@@ -693,44 +691,9 @@ describe('ensureTileElement', () => {
         game._initializeDOMElements();
         game._resetModuleState({ isColorMode: false });
 
-        // Mock CSS calculation for consistent test results
-        const originalGetComputedStyle = window.getComputedStyle;
-        window.getComputedStyle = (elt) => {
-            const style = originalGetComputedStyle(elt);
-            if (elt === document.documentElement) {
-                return {
-                    ...style,
-                    getPropertyValue: (prop) => {
-                        if (prop === '--gap-grid') return `${expectedTestCellGap}px`;
-                        return style.getPropertyValue(prop);
-                    }
-                };
-            }
-            return style;
-        };
-
-        // Mock offsetWidth for .grid-cell elements
-        const originalOffsetWidthDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
-            configurable: true,
-            get: function() {
-                if (typeof this.classList !== 'undefined' && this.classList.contains('grid-cell')) {
-                    return expectedTestCellSize;
-                }
-                return originalOffsetWidthDescriptor?.get?.call(this) || 0;
-            }
-        });
-
+        // No more dimension mocking needed - CSS Grid handles positioning
         game.createBackgroundGrid();
-
-        // Restore original behaviors after dimension calculation
-        if (originalOffsetWidthDescriptor) {
-            Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidthDescriptor);
-        } else {
-            delete HTMLElement.prototype.offsetWidth;
-        }
-        window.getComputedStyle = originalGetComputedStyle;
-        gridContainerElement.innerHTML = '';
+        gridContainerElement.innerHTML = ''; // Clear background cells for clean testing
     });
 
     test('should return null if gridContainer is not available', () => {
@@ -799,21 +762,18 @@ describe('ensureTileElement', () => {
         jest.useRealTimers();
     });
 
-    test('should correctly set dimensions and position', () => {
+    test('should correctly set CSS Grid position', () => {
         const tileElement = game.ensureTileElement(mockTileObject, mockRow, mockCol);
-        // The function uses getDimensions() which may return fallback values
-        // Let's check what it actually returns rather than expecting the mocked value
-        const actualWidth = tileElement.style.width;
-        const actualHeight = tileElement.style.height;
         
-        expect(actualWidth).toMatch(/^\d+px$/); // Should be some number of pixels
-        expect(actualHeight).toMatch(/^\d+px$/); // Should be some number of pixels
-        expect(actualWidth).toBe(actualHeight); // Should be square
+        // With CSS Grid positioning, check grid position instead of width/height/transform
+        expect(tileElement.style.gridColumn).toBe((mockCol + 1).toString());
+        expect(tileElement.style.gridRow).toBe((mockRow + 1).toString());
         
-        // Position should be calculated correctly regardless of exact size
-        const transform = tileElement.style.transform;
-        // Updated regex to handle "translate3d(150px, 75px, 0)" format
-        expect(transform).toMatch(/^translate3d\(\d+px, \d+px, 0\)$/);
+        // Verify tile content and styling
+        expect(tileElement.classList.contains('tile')).toBe(true);
+        expect(tileElement.classList.contains('tile-2')).toBe(true);
+        expect(tileElement.textContent).toBe('2');
+        expect(tileElement.style.backgroundColor).toBe('rgb(255, 87, 51)'); // #FF5733
     });
 });
 
@@ -831,46 +791,8 @@ describe('drawGrid', () => {
             isColorMode: false,
         });
 
-        const expectedTestCellSize = 60; 
-        const expectedTestCellGap = 10;
-
-        // Mock getComputedStyle for --gap-grid
-        const originalGetComputedStyle = window.getComputedStyle;
-        window.getComputedStyle = (elt) => {
-            const style = originalGetComputedStyle(elt);
-            if (elt === document.documentElement) {
-                return {
-                    ...style,
-                    getPropertyValue: (prop) => {
-                        if (prop === '--gap-grid') return `${expectedTestCellGap}px`;
-                        return style.getPropertyValue(prop);
-                    }
-                };
-            }
-            return style;
-        };
-
-        // Mock offsetWidth for .grid-cell elements
-        const originalOffsetWidthDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
-            configurable: true,
-            get: function() {
-                if (typeof this.classList !== 'undefined' && this.classList.contains('grid-cell')) {
-                    return expectedTestCellSize;
-                }
-                return originalOffsetWidthDescriptor?.get?.call(this) || 0;
-            }
-        });
-
+        // No more dimension mocking needed - CSS Grid handles positioning
         game.createBackgroundGrid();
-
-        // Restore original behaviors
-        if (originalOffsetWidthDescriptor) {
-            Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidthDescriptor);
-        } else {
-            delete HTMLElement.prototype.offsetWidth;
-        }
-        window.getComputedStyle = originalGetComputedStyle;
     });
 
     afterEach(() => {

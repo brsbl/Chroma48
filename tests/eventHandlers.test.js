@@ -30,8 +30,6 @@ describe('Touch Controls UI Interactions', () => {
     let moveTilesUpSpy, moveTilesDownSpy, moveTilesLeftSpy, moveTilesRightSpy;
     let isBoardFullTouchSpy;
     let boundHandleTouchStart, boundHandleTouchEnd;
-    const expectedTestCellSize = 60; // Consistent with uiInteractions
-    const expectedTestCellGap = 10;  // Consistent with uiInteractions
 
     beforeEach(() => {
         document.body.innerHTML = `
@@ -48,44 +46,8 @@ describe('Touch Controls UI Interactions', () => {
             GRID_SIZE: 4 // Explicitly set GRID_SIZE for safety, though default is 4
         });
 
-        // Mock getComputedStyle for --gap-grid
-        const originalGetComputedStyle = window.getComputedStyle;
-        window.getComputedStyle = (elt) => {
-            const style = originalGetComputedStyle(elt);
-            if (elt === document.documentElement) {
-                return {
-                    ...style,
-                    getPropertyValue: (prop) => {
-                        if (prop === '--gap-grid') return `${expectedTestCellGap}px`;
-                        if (prop === '--size-grid-cell') return `${expectedTestCellSize}px`; // For fallback in createBackgroundGrid
-                        return style.getPropertyValue(prop);
-                    }
-                };
-            }
-            return style;
-        };
-
-        // Temporarily redefine HTMLElement.prototype.offsetWidth for .grid-cell elements
-        const originalOffsetWidthDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
-            configurable: true,
-            get: function() {
-                if (typeof this.classList !== 'undefined' && this.classList.contains('grid-cell')) {
-                    return expectedTestCellSize;
-                }
-                return originalOffsetWidthDescriptor && originalOffsetWidthDescriptor.get ? originalOffsetWidthDescriptor.get.call(this) : 0;
-            }
-        });
-
-        game.createBackgroundGrid(); // This initializes tileDOMElements and calculates currentCellSize/Gap
-
-        // Restore original offsetWidth behavior
-        if (originalOffsetWidthDescriptor) {
-            Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidthDescriptor);
-        } else {
-            delete HTMLElement.prototype.offsetWidth;
-        }
-        window.getComputedStyle = originalGetComputedStyle; // Restore
+        // No more dimension mocking needed - CSS Grid handles positioning
+        game.createBackgroundGrid(); // This initializes tileDOMElements
 
         moveTilesUpSpy = jest.spyOn(game, 'moveTilesUp').mockReturnValue(false);
         moveTilesDownSpy = jest.spyOn(game, 'moveTilesDown').mockReturnValue(false);
@@ -162,8 +124,6 @@ describe('handleUserKeyPress', () => {
     let moveUpSpy, moveDownSpy, moveLeftSpy, moveRightSpy;
     let isBoardFullKeySpy; // Use a distinct name for this spy if needed
     let mockEvent;
-    const expectedTestCellSize = 60;
-    const expectedTestCellGap = 10;
 
     beforeEach(() => {
         document.body.innerHTML = '<div id="grid-container"></div><div id="score">0</div>';
@@ -184,44 +144,8 @@ describe('handleUserKeyPress', () => {
             GRID_SIZE: 4 // Explicitly set GRID_SIZE for safety
         });
 
-        // Mock getComputedStyle for --gap-grid and --size-grid-cell
-        const originalGetComputedStyle = window.getComputedStyle;
-        window.getComputedStyle = (elt) => {
-            const style = originalGetComputedStyle(elt);
-            if (elt === document.documentElement) {
-                return {
-                    ...style,
-                    getPropertyValue: (prop) => {
-                        if (prop === '--gap-grid') return `${expectedTestCellGap}px`;
-                        if (prop === '--size-grid-cell') return `${expectedTestCellSize}px`;
-                        return style.getPropertyValue(prop);
-                    }
-                };
-            }
-            return style;
-        };
-
-        // Temporarily redefine HTMLElement.prototype.offsetWidth for .grid-cell elements
-        const originalOffsetWidthDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
-            configurable: true,
-            get: function() {
-                if (typeof this.classList !== 'undefined' && this.classList.contains('grid-cell')) {
-                    return expectedTestCellSize;
-                }
-                return originalOffsetWidthDescriptor && originalOffsetWidthDescriptor.get ? originalOffsetWidthDescriptor.get.call(this) : 0;
-            }
-        });
-
+        // No more dimension mocking needed - CSS Grid handles positioning
         game.createBackgroundGrid(); // This initializes tileDOMElements
-
-        // Restore original offsetWidth behavior
-        if (originalOffsetWidthDescriptor) {
-            Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidthDescriptor);
-        } else {
-            delete HTMLElement.prototype.offsetWidth;
-        }
-        window.getComputedStyle = originalGetComputedStyle; // Restore
 
         jest.clearAllMocks(); // Clear mock function call counts
 
