@@ -22,11 +22,17 @@ let currentColorIndex = 0;
 let isColorMode = false;
 let isModalActive = false;
 let newBestScoreAchievedThisGame = false; // This flag now gates confetti per game
-let gridNeedsRedraw = false; // Dirty flag for grid rendering
 
-// Cached DOM measurements
-let currentCellSize = 0;
-let currentCellGap = 0;
+// Memoized dimension calculation
+let dimensionCache = {
+    cellSize: 0,
+    cellGap: 0,
+    valid: false
+};
+
+// Batched DOM updates
+let pendingDOMUpdates = [];
+let domUpdateScheduled = false;
 
 // DOM Element Variables - to be assigned in _initializeDOMElements
 let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContainer, messageParagraph,
@@ -127,16 +133,69 @@ const gameApi = {
     },
     // --- End Color Helpers ---
 
-    markGridDirty: function() {
-        if (!gridNeedsRedraw) {
-            gridNeedsRedraw = true;
+    getDimensions: function() {
+        if (dimensionCache.valid) {
+            return dimensionCache;
+        }
+        
+        if (!gridContainer) {
+            return { cellSize: 65, cellGap: 10 }; // Fallback values
+        }
+        
+        // Calculate from CSS and actual DOM
+        const computedStyles = getComputedStyle(document.documentElement);
+        const gap = parseFloat(computedStyles.getPropertyValue('--gap-grid'));
+        
+        const firstGridCell = gridContainer.querySelector('.grid-cell');
+        let cellSize;
+        if (firstGridCell) {
+            cellSize = firstGridCell.offsetWidth;
+        } else {
+            // Fallback calculation if no grid cells exist
+            cellSize = parseFloat(computedStyles.getPropertyValue('--size-grid-cell'));
+        }
+        
+        // Cache the results
+        dimensionCache = {
+            cellSize: cellSize,
+            cellGap: gap,
+            valid: true
+        };
+        
+        return dimensionCache;
+    },
+
+    invalidateDimensionCache: function() {
+        dimensionCache.valid = false;
+    },
+
+    calculateTilePosition: function(row, col) {
+        const { cellSize, cellGap } = this.getDimensions();
+        return {
+            x: col * (cellSize + cellGap),
+            y: row * (cellSize + cellGap)
+        };
+    },
+
+    scheduleDOMUpdate: function(updateFn) {
+        pendingDOMUpdates.push(updateFn);
+        if (!domUpdateScheduled) {
+            domUpdateScheduled = true;
             requestAnimationFrame(() => {
-                if (gridNeedsRedraw) {
-                    this.drawGrid();
-                    gridNeedsRedraw = false;
-                }
+                this.flushDOMUpdates();
+                domUpdateScheduled = false;
             });
         }
+    },
+
+    flushDOMUpdates: function() {
+        const updates = pendingDOMUpdates.splice(0);
+        updates.forEach(updateFn => updateFn());
+    },
+
+    markGridDirty: function() {
+        // Deprecated - use drawGrid() directly or scheduleDOMUpdate for batching
+        this.drawGrid();
     },
 
     setupGame: function() {
@@ -182,16 +241,10 @@ const gameApi = {
                 gridContainer.appendChild(cell);
             }
         }
-        // Cache cell size and gap after creating the background grid
-        const computedStyles = getComputedStyle(document.documentElement);
-        currentCellGap = parseFloat(computedStyles.getPropertyValue('--gap-grid'));
-        const firstGridCell = gridContainer.querySelector('.grid-cell');
-        if (firstGridCell) {
-            currentCellSize = firstGridCell.offsetWidth;
-        } else {
-            currentCellSize = parseFloat(computedStyles.getPropertyValue('--size-grid-cell')); 
-        }
-
+        
+        // Invalidate dimension cache since grid structure changed
+        this.invalidateDimensionCache();
+        
         // Clear any stray tile DOM elements if this function is ever called mid-game (though it shouldn't be for this strategy)
         const existingTiles = gridContainer.querySelectorAll('.tile');
         existingTiles.forEach(tile => tile.remove());
@@ -266,22 +319,19 @@ const gameApi = {
     },
 
     createTileElement: function(tileObject, row, col) {
-        // This function now assumes currentCellSize and currentCellGap are up-to-date module variables
         if (!gridContainer) return null;
 
         const tile = document.createElement('div');
         tile.classList.add('tile');
-        // Value class is updated by updateTileElement
         
-        // Text and color are updated by updateTileElement
-
-        const translateX = col * (currentCellSize + currentCellGap);
-        const translateY = row * (currentCellSize + currentCellGap);
-        tile.style.width = `${currentCellSize}px`;
-        tile.style.height = `${currentCellSize}px`;
-        tile.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`;
+        // Calculate position synchronously
+        const position = this.calculateTilePosition(row, col);
+        const { cellSize } = this.getDimensions();
         
-        // isNewlyMerged animation handled by updateTileElement
+        // Set size and position immediately (synchronous)
+        tile.style.width = `${cellSize}px`;
+        tile.style.height = `${cellSize}px`;
+        tile.style.transform = `translate3d(${position.x}px, ${position.y}px, 0)`;
         
         gridContainer.appendChild(tile);
         return tile;
@@ -323,7 +373,6 @@ const gameApi = {
 
     drawGrid: function() {
         if (!gridContainer) return;
-        // currentCellSize and currentCellGap should be up-to-date from createBackgroundGrid or a resize handler
 
         for (let r = 0; r < GRID_SIZE; r++) {
             for (let c = 0; c < GRID_SIZE; c++) {
@@ -331,18 +380,18 @@ const gameApi = {
                 let tileDOM = tileDOMElements[r][c];
 
                 if (tileData) {
-                    // Calculate new position (might be the same if not moving)
-                    const expectedTranslateX = c * (currentCellSize + currentCellGap);
-                    const expectedTranslateY = r * (currentCellSize + currentCellGap);
-                    const expectedTransform = `translate3d(${expectedTranslateX}px, ${expectedTranslateY}px, 0)`;
+                    // Calculate position synchronously
+                    const position = this.calculateTilePosition(r, c);
+                    const expectedTransform = `translate3d(${position.x}px, ${position.y}px, 0)`;
 
-                    if (!tileDOM) { // Tile data exists, but no DOM element -> create it
-                        tileDOM = this.createTileElement(tileData, r, c); // createTileElement sets initial position
+                    if (!tileDOM) { 
+                        // Tile data exists, but no DOM element -> create it immediately
+                        tileDOM = this.createTileElement(tileData, r, c);
                         tileDOMElements[r][c] = this.updateTileElement(tileDOM, tileData, true);
                     } else {
-                        // Tile DOM exists, update its properties and position if necessary
+                        // Tile DOM exists, update its properties and position
                         tileDOMElements[r][c] = this.updateTileElement(tileDOM, tileData, false);
-                        // Update position if it changed (e.g., for falling tile)
+                        // Update position immediately if it changed
                         if (tileDOM.style.transform !== expectedTransform) {
                             tileDOM.style.transform = expectedTransform;
                         }
@@ -350,7 +399,7 @@ const gameApi = {
                 } else {
                     // No tile data, ensure no DOM element exists
                     if (tileDOM) {
-                        tileDOMElements[r][c] = this.updateTileElement(tileDOM, null, false); // Call updateTileElement for removal
+                        tileDOMElements[r][c] = this.updateTileElement(tileDOM, null, false);
                     }
                 }
             }
@@ -391,7 +440,7 @@ const gameApi = {
         const col = availableCols[Math.floor(Math.random() * availableCols.length)];
         grid[0][col] = newTileObject;
         activeFallingTile = { tileObject: newTileObject, row: 0, col: col }; 
-        this.markGridDirty(); 
+        this.drawGrid(); // Direct call for immediate tile rendering
         gameInterval = setInterval(this.gameLoop.bind(this), FALL_SPEED);
     },
         
@@ -425,7 +474,7 @@ const gameApi = {
                 this.handleGameOver();
             }
         }
-        this.markGridDirty(); 
+        this.drawGrid(); // Direct call for immediate visual updates
     },
 
     moveTilesLeft: function() {
@@ -629,7 +678,7 @@ const gameApi = {
         if (moved) {
             if (!wasTileFallingWhenKeyPressed) this.spawnNewFallingTile();
             if (!isGameOver && this.isBoardFull()) this.handleGameOver();
-            this.markGridDirty(); 
+            this.drawGrid(); // Direct call for immediate visual updates
         }
     },
 
@@ -899,7 +948,7 @@ const gameApi = {
 
         if (moved) {
             if (!wasTileFallingWhenSwiped) gameContext.spawnNewFallingTile();
-            gameContext.markGridDirty(); 
+            gameContext.drawGrid(); // Direct call for immediate visual updates
             if (gameContext.isBoardFull()) { 
                 gameContext.handleGameOver();
             }
@@ -959,7 +1008,12 @@ const gameApi = {
         tempIsColorMode = initialTestState.tempIsColorMode !== undefined ? initialTestState.tempIsColorMode : isColorMode;
         tempTileColors = initialTestState.tempTileColors ? [...initialTestState.tempTileColors] : [...TILE_COLORS];
         settingsCurrentEditingSwatchIndex = initialTestState.settingsCurrentEditingSwatchIndex !== undefined ? initialTestState.settingsCurrentEditingSwatchIndex : -1;
-        gridNeedsRedraw = false; // Reset dirty flag
+        
+        // Reset caching systems
+        dimensionCache.valid = false;
+        pendingDOMUpdates.length = 0;
+        domUpdateScheduled = false;
+        
         if (scoreDisplay) scoreDisplay.textContent = score.toLocaleString();
         if (bestScoreDisplay) bestScoreDisplay.textContent = bestScore.toLocaleString();
         if (pauseButton) pauseButton.innerHTML = '<img src="icons/Pause.png" alt="Pause" class="button-icon">Pause';
@@ -1066,18 +1120,10 @@ if (typeof document !== 'undefined') {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
                 if (gridContainer) {
-                    // Recalculate cell size and gap
-                    const computedStyles = getComputedStyle(document.documentElement);
-                    currentCellGap = parseFloat(computedStyles.getPropertyValue('--gap-grid'));
-                    const firstGridCell = gridContainer.querySelector('.grid-cell');
-                    if (firstGridCell) {
-                        currentCellSize = firstGridCell.offsetWidth;
-                    } else {
-                        // Fallback if no grid cells (e.g. before setupGame completes or if grid is hidden)
-                        currentCellSize = parseFloat(computedStyles.getPropertyValue('--size-grid-cell')); 
-                    }
+                    // Invalidate dimension cache to force recalculation
+                    gameApi.invalidateDimensionCache();
                     // Redraw the grid with new dimensions for existing tiles
-                    gameApi.markGridDirty(); 
+                    gameApi.drawGrid(); 
                 }
             }, 250); // Debounce resize handling
         });
