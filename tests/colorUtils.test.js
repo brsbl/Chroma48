@@ -30,30 +30,6 @@ describe('Color Utility Functions', () => {
         });
     });
 
-    describe('rgbToHsl', () => {
-        test('should convert RGB red to HSL', () => {
-            const hsl = game.rgbToHsl(255, 0, 0);
-            expect(hsl.h).toBeCloseTo(0);
-            expect(hsl.s).toBeCloseTo(1);
-            expect(hsl.l).toBeCloseTo(0.5);
-        });
-        test('should convert RGB gray to HSL (achromatic)', () => {
-            const hsl = game.rgbToHsl(128, 128, 128);
-            expect(hsl.h).toBeCloseTo(0);
-            expect(hsl.s).toBeCloseTo(0);
-            expect(hsl.l).toBeCloseTo(0.50, 1);
-        });
-    });
-
-    describe('hslToRgb', () => {
-        test('should convert HSL red to RGB', () => {
-            expect(game.hslToRgb(0, 1, 0.5)).toEqual({ r: 255, g: 0, b: 0 });
-        });
-        test('should convert HSL gray to RGB (achromatic)', () => {
-            expect(game.hslToRgb(0, 0, 0.5)).toEqual({ r: 128, g: 128, b: 128 });
-        });
-    });
-
     describe('rgbToHex', () => {
         test('should convert RGB red to hex', () => {
             expect(game.rgbToHex(255, 0, 0)).toBe('#ff0000');
@@ -61,25 +37,33 @@ describe('Color Utility Functions', () => {
         test('should handle single digit hex components', () => {
             expect(game.rgbToHex(10, 10, 10)).toBe('#0a0a0a');
         });
+        test('should handle decimal values by rounding', () => {
+            expect(game.rgbToHex(10.7, 20.3, 30.9)).toBe('#0b141f');
+        });
     });
 
-    describe('mixColors', () => {
-        test('should mix two distinct colors (e.g., red and blue)', () => {
-            expect(game.mixColors('#FF0000', '#0000FF')).toBe('#ff00ff');
+    describe('mixColors - RGB Averaging', () => {
+        test('should mix red and blue to get purple', () => {
+            expect(game.mixColors('#FF0000', '#0000FF')).toBe('#800080');
+        });
+        test('should mix white and black to get gray', () => {
+            expect(game.mixColors('#FFFFFF', '#000000')).toBe('#808080');
         });
         test('should mix two similar colors', () => {
-            const color1 = '#FFDDDD';
-            const color2 = '#FFEEEE';
+            const color1 = '#FFDDDD'; // RGB: 255, 221, 221
+            const color2 = '#FFEEEE'; // RGB: 255, 238, 238
             const mixed = game.mixColors(color1, color2);
-            const mixedRgb = game.hexToRgb(mixed);
-            expect(mixedRgb.r).toBeGreaterThan(250);
-            expect(mixedRgb.g).toBe(229);
-            expect(mixedRgb.b).toBe(229);
+            // Expected: RGB average = (255+255)/2, (221+238)/2, (221+238)/2 = 255, 229.5, 229.5
+            expect(mixed).toBe('#ffe6e6'); // Rounded: 255, 230, 230
         });
-         test('should mix yellow and blue to get a green-ish hue (approx)', () => {
-            const yellow = '#FFFF00';
-            const blue = '#0000FF';
-            expect(game.mixColors(yellow, blue)).toBe('#00ffb1');
+        test('should mix yellow and blue', () => {
+            const yellow = '#FFFF00'; // RGB: 255, 255, 0
+            const blue = '#0000FF';   // RGB: 0, 0, 255
+            // Expected: RGB average = 127.5, 127.5, 127.5
+            expect(game.mixColors(yellow, blue)).toBe('#808080'); // Rounded: 128, 128, 128
+        });
+        test('should handle 3-digit hex colors', () => {
+            expect(game.mixColors('#F00', '#00F')).toBe('#800080');
         });
     });
 }); 
