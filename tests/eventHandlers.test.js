@@ -27,7 +27,11 @@ describe('Touch Controls UI Interactions', () => {
     const expectedTestCellGap = 10;  // Consistent with uiInteractions
 
     beforeEach(() => {
-        document.body.innerHTML = `<div id="grid-container" class="grid-container"></div>`;
+        document.body.innerHTML = `
+            <div class="game-container">
+                <div id="grid-container" class="grid-container"></div>
+            </div>
+        `;
         gridContainerElement = document.getElementById('grid-container');
         game._initializeDOMElements();
         game._resetModuleState({ 

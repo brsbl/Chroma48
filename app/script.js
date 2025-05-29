@@ -22,18 +22,19 @@ let currentColorIndex = 0;
 let isColorMode = false;
 let isModalActive = false;
 let newBestScoreAchievedThisGame = false; // This flag now gates confetti per game
+let gridNeedsRedraw = false; // Dirty flag for grid rendering
 
 // Cached DOM measurements
 let currentCellSize = 0;
 let currentCellGap = 0;
 
 // DOM Element Variables - to be assigned in _initializeDOMElements
-let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContainer,
+let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContainer, messageParagraph,
     restartButton, tryAgainButton, pauseButton, gameExplanation, viewportSettingsButton,
     settingsModal, closeSettingsModalButton, numberModeRadio, colorModeRadio,
     settingsColorPaletteGrid, saveSettingsButton, cancelSettingsButton,
     colorPickerInput, paletteSuccessMessage,
-    toggleButton, instructionsContent, collapsibleDrawer, 
+    toggleButton, instructionsContent, collapsibleDrawer, toggleButtonArrow,
     closeInstructionsButton_collapsible; // Removed newBestScoreEmojiLeft, newBestScoreEmojiRight
 
 let tempIsColorMode = false;
@@ -126,11 +127,23 @@ const gameApi = {
     },
     // --- End Color Helpers ---
 
+    markGridDirty: function() {
+        if (!gridNeedsRedraw) {
+            gridNeedsRedraw = true;
+            requestAnimationFrame(() => {
+                if (gridNeedsRedraw) {
+                    this.drawGrid();
+                    gridNeedsRedraw = false;
+                }
+            });
+        }
+    },
+
     setupGame: function() {
         isPaused = false;
         if(pauseButton) pauseButton.innerHTML = '<img src="icons/Pause.png" alt="Pause" class="button-icon">Pause';
         if(messageContainer) {
-            if (messageContainer.querySelector('p')) messageContainer.querySelector('p').textContent = '';
+            if (messageParagraph) messageParagraph.textContent = '';
             messageContainer.style.display = 'none';
         }
 
@@ -233,7 +246,6 @@ const gameApi = {
         this.updateGameMessageVisibility();
 
         if (messageContainer) {
-            const messageParagraph = messageContainer.querySelector('p');
             if (messageParagraph) {
                 let gameOverHTML = "Game Over!";
 
@@ -263,12 +275,11 @@ const gameApi = {
         
         // Text and color are updated by updateTileElement
 
-        const top = row * (currentCellSize + currentCellGap);
-        const left = col * (currentCellSize + currentCellGap);
+        const translateX = col * (currentCellSize + currentCellGap);
+        const translateY = row * (currentCellSize + currentCellGap);
         tile.style.width = `${currentCellSize}px`;
         tile.style.height = `${currentCellSize}px`;
-        tile.style.top = `${top}px`;
-        tile.style.left = `${left}px`;
+        tile.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`;
         
         // isNewlyMerged animation handled by updateTileElement
         
@@ -321,8 +332,9 @@ const gameApi = {
 
                 if (tileData) {
                     // Calculate new position (might be the same if not moving)
-                    const expectedTop = r * (currentCellSize + currentCellGap);
-                    const expectedLeft = c * (currentCellSize + currentCellGap);
+                    const expectedTranslateX = c * (currentCellSize + currentCellGap);
+                    const expectedTranslateY = r * (currentCellSize + currentCellGap);
+                    const expectedTransform = `translate3d(${expectedTranslateX}px, ${expectedTranslateY}px, 0)`;
 
                     if (!tileDOM) { // Tile data exists, but no DOM element -> create it
                         tileDOM = this.createTileElement(tileData, r, c); // createTileElement sets initial position
@@ -331,9 +343,8 @@ const gameApi = {
                         // Tile DOM exists, update its properties and position if necessary
                         tileDOMElements[r][c] = this.updateTileElement(tileDOM, tileData, false);
                         // Update position if it changed (e.g., for falling tile)
-                        if (tileDOM.style.top !== `${expectedTop}px` || tileDOM.style.left !== `${expectedLeft}px`) {
-                            tileDOM.style.top = `${expectedTop}px`;
-                            tileDOM.style.left = `${expectedLeft}px`;
+                        if (tileDOM.style.transform !== expectedTransform) {
+                            tileDOM.style.transform = expectedTransform;
                         }
                     }
                 } else {
@@ -380,7 +391,7 @@ const gameApi = {
         const col = availableCols[Math.floor(Math.random() * availableCols.length)];
         grid[0][col] = newTileObject;
         activeFallingTile = { tileObject: newTileObject, row: 0, col: col }; 
-        this.drawGrid(); 
+        this.markGridDirty(); 
         gameInterval = setInterval(this.gameLoop.bind(this), FALL_SPEED);
     },
         
@@ -414,7 +425,7 @@ const gameApi = {
                 this.handleGameOver();
             }
         }
-        this.drawGrid(); 
+        this.markGridDirty(); 
     },
 
     moveTilesLeft: function() {
@@ -618,7 +629,7 @@ const gameApi = {
         if (moved) {
             if (!wasTileFallingWhenKeyPressed) this.spawnNewFallingTile();
             if (!isGameOver && this.isBoardFull()) this.handleGameOver();
-            this.drawGrid(); 
+            this.markGridDirty(); 
         }
     },
 
@@ -632,8 +643,8 @@ const gameApi = {
             }
             if (pauseButton) pauseButton.innerHTML = '<img src="icons/Play.png" alt="Play" class="button-icon">Resume';
             if (tryAgainButton) tryAgainButton.style.display = 'none';
-            if (messageContainer && messageContainer.querySelector('p')) {
-                messageContainer.querySelector('p').textContent = 'Game Paused';
+            if (messageContainer && messageParagraph) {
+                messageParagraph.textContent = 'Game Paused';
                 messageContainer.style.display = 'flex';
             }
         } else {
@@ -641,7 +652,7 @@ const gameApi = {
             if (tryAgainButton) tryAgainButton.style.display = 'flex';
             if (messageContainer) {
                  messageContainer.style.display = 'none';
-                 if(messageContainer.querySelector('p')) messageContainer.querySelector('p').textContent = '';
+                 if(messageParagraph) messageParagraph.textContent = '';
             }
             if (activeFallingTile && !isGameOver) { 
                 if(gameInterval) clearInterval(gameInterval);
@@ -712,29 +723,32 @@ const gameApi = {
                 if (isMobile) {
                     // Position the input over the swatch
                     const swatchRect = swatch.getBoundingClientRect();
-                    colorPickerInput.style.position = 'fixed';
-                    colorPickerInput.style.left = swatchRect.left + 'px';
-                    colorPickerInput.style.top = swatchRect.top + 'px';
-                    colorPickerInput.style.width = swatchRect.width + 'px';
-                    colorPickerInput.style.height = swatchRect.height + 'px';
-                    colorPickerInput.style.opacity = '0';
-                    colorPickerInput.style.pointerEvents = 'auto';
-                    colorPickerInput.style.zIndex = '3000';
-                    colorPickerInput.style.display = 'block';
+                    const inputStyle = colorPickerInput.style;
+                    inputStyle.position = 'fixed';
+                    inputStyle.left = swatchRect.left + 'px';
+                    inputStyle.top = swatchRect.top + 'px';
+                    inputStyle.width = swatchRect.width + 'px';
+                    inputStyle.height = swatchRect.height + 'px';
+                    inputStyle.opacity = '0';
+                    inputStyle.pointerEvents = 'auto';
+                    inputStyle.zIndex = '3000';
+                    inputStyle.display = 'block';
+                    
                     // Focus and click
                     colorPickerInput.focus();
                     setTimeout(() => colorPickerInput.click(), 0);
+                    
                     // After input, hide again
                     const hideInput = () => {
-                        colorPickerInput.style.position = '';
-                        colorPickerInput.style.left = '';
-                        colorPickerInput.style.top = '';
-                        colorPickerInput.style.width = '';
-                        colorPickerInput.style.height = '';
-                        colorPickerInput.style.opacity = '';
-                        colorPickerInput.style.pointerEvents = '';
-                        colorPickerInput.style.zIndex = '';
-                        colorPickerInput.style.display = '';
+                        inputStyle.position = '';
+                        inputStyle.left = '';
+                        inputStyle.top = '';
+                        inputStyle.width = '';
+                        inputStyle.height = '';
+                        inputStyle.opacity = '';
+                        inputStyle.pointerEvents = '';
+                        inputStyle.zIndex = '';
+                        inputStyle.display = '';
                         colorPickerInput.removeEventListener('input', hideInput);
                         colorPickerInput.removeEventListener('blur', hideInput);
                     };
@@ -809,14 +823,17 @@ const gameApi = {
 
     handleTouchStart: function(event) {
         if (isGameOver || isPaused || event.touches.length > 1) return; 
-        event.preventDefault();
+        // Only prevent default if we're actually going to handle this touch
+        if (gameContainer && gameContainer.contains(event.target)) {
+            event.preventDefault();
+        }
         touchStartX = event.touches[0].clientX;
         touchStartY = event.touches[0].clientY;
     },
 
     handleTouchMove: function(event) {
         if (isGameOver || isPaused || !event.touches || event.touches.length > 1) return;
-        // Only prevent default if the touch is happening inside the game container or grid container
+        // Only prevent default if the touch is happening inside the game container
         if (gameContainer && gameContainer.contains(event.target)) {
             event.preventDefault(); 
         }
@@ -882,7 +899,7 @@ const gameApi = {
 
         if (moved) {
             if (!wasTileFallingWhenSwiped) gameContext.spawnNewFallingTile();
-            gameContext.drawGrid(); 
+            gameContext.markGridDirty(); 
             if (gameContext.isBoardFull()) { 
                 gameContext.handleGameOver();
             }
@@ -898,6 +915,7 @@ const gameApi = {
         scoreDisplay = document.getElementById('score');
         bestScoreDisplay = document.getElementById('best-score');
         messageContainer = document.getElementById('game-message');
+        messageParagraph = messageContainer.querySelector('p');
         restartButton = document.getElementById('restart-button');
         tryAgainButton = document.getElementById('retry-button');
         pauseButton = document.getElementById('pause-button');
@@ -917,6 +935,9 @@ const gameApi = {
         collapsibleDrawer = document.querySelector('.collapsible-drawer');
         if (instructionsContent) {
              closeInstructionsButton_collapsible = instructionsContent.querySelector('.modal-close-button');
+        }
+        if (toggleButton) {
+            toggleButtonArrow = toggleButton.querySelector('.arrow');
         }
     },
 
@@ -938,11 +959,12 @@ const gameApi = {
         tempIsColorMode = initialTestState.tempIsColorMode !== undefined ? initialTestState.tempIsColorMode : isColorMode;
         tempTileColors = initialTestState.tempTileColors ? [...initialTestState.tempTileColors] : [...TILE_COLORS];
         settingsCurrentEditingSwatchIndex = initialTestState.settingsCurrentEditingSwatchIndex !== undefined ? initialTestState.settingsCurrentEditingSwatchIndex : -1;
+        gridNeedsRedraw = false; // Reset dirty flag
         if (scoreDisplay) scoreDisplay.textContent = score.toLocaleString();
         if (bestScoreDisplay) bestScoreDisplay.textContent = bestScore.toLocaleString();
         if (pauseButton) pauseButton.innerHTML = '<img src="icons/Pause.png" alt="Pause" class="button-icon">Pause';
         if (messageContainer) {
-            if (messageContainer.querySelector('p')) messageContainer.querySelector('p').textContent = '';
+            if (messageParagraph) messageParagraph.textContent = '';
             messageContainer.style.display = 'none';
         }
         if(colorModeRadio) colorModeRadio.checked = isColorMode;
@@ -1035,7 +1057,7 @@ if (typeof document !== 'undefined') {
         if (gridContainer) {
             gridContainer.addEventListener('touchstart', gameApi.handleTouchStart.bind(gameApi), { passive: false });
             gridContainer.addEventListener('touchmove', gameApi.handleTouchMove.bind(gameApi), { passive: false });
-            gridContainer.addEventListener('touchend', gameApi.handleTouchEnd.bind(gameApi), { passive: false });
+            gridContainer.addEventListener('touchend', gameApi.handleTouchEnd.bind(gameApi), { passive: true });
         }
 
         // Add resize listener
@@ -1055,7 +1077,7 @@ if (typeof document !== 'undefined') {
                         currentCellSize = parseFloat(computedStyles.getPropertyValue('--size-grid-cell')); 
                     }
                     // Redraw the grid with new dimensions for existing tiles
-                    gameApi.drawGrid(); 
+                    gameApi.markGridDirty(); 
                 }
             }, 250); // Debounce resize handling
         });

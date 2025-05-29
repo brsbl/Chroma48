@@ -544,10 +544,13 @@ describe('setupGame', () => {
             currentColorIndex: 1,
             GRID_SIZE: initialGridSize,
         });
+
+        jest.useFakeTimers();
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
+        jest.useRealTimers();
     });
 
     test('should reset isPaused to false', () => {
@@ -583,11 +586,24 @@ describe('setupGame', () => {
 
     test('gridContainer should be repopulated by setupGame', () => {
         if (gridContainerElement) {
+            // Mock requestAnimationFrame to execute callbacks immediately
+            const originalRAF = global.requestAnimationFrame;
+            global.requestAnimationFrame = jest.fn((callback) => {
+                setTimeout(callback, 0);
+                return 1;
+            });
+            
             const initialHTML = gridContainerElement.innerHTML;
             game.setupGame();
+            
+            // Process any pending async operations
+            jest.runAllTimers();
+            
             expect(gridContainerElement.innerHTML).not.toBe(initialHTML);
             expect(gridContainerElement.querySelector('.grid-cell')).not.toBeNull();
             expect(gridContainerElement.querySelector('.tile')).not.toBeNull();
+            
+            global.requestAnimationFrame = originalRAF;
         }
     });
 

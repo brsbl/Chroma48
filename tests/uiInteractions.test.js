@@ -748,14 +748,14 @@ describe('createTileElement', () => {
 
     // Specific value/text/color tests moved to updateTileElement tests
 
-    test('should correctly set width, height, top, and left styles using cached sizes', () => {
+    test('should correctly set width, height, and transform styles using cached sizes', () => {
         const tileElement = game.createTileElement(mockTileObject, mockRow, mockCol);
         expect(tileElement.style.width).toBe(`${expectedTestCellSize}px`);
         expect(tileElement.style.height).toBe(`${expectedTestCellSize}px`);
-        const expectedTop = mockRow * (expectedTestCellSize + expectedTestCellGap);
-        const expectedLeft = mockCol * (expectedTestCellSize + expectedTestCellGap);
-        expect(tileElement.style.top).toBe(`${expectedTop}px`);
-        expect(tileElement.style.left).toBe(`${expectedLeft}px`);
+        const expectedTranslateX = mockCol * (expectedTestCellSize + expectedTestCellGap);
+        const expectedTranslateY = mockRow * (expectedTestCellSize + expectedTestCellGap);
+        const expectedTransform = `translate3d(${expectedTranslateX}px, ${expectedTranslateY}px, 0)`;
+        expect(tileElement.style.transform).toBe(expectedTransform);
     });
 
     test('should append the tile to gridContainer', () => {

@@ -315,14 +315,16 @@ main {
     align-items: center;
     font-size: clamp(24px, 6vw, 40px); /* Responsive tile/cell font size */
     font-weight: var(--font-weight-regular);
-    box-shadow: 0 4px 4px rgba(180, 180, 180, 0.341),
-                inset 0 1px 1px rgba(255, 255, 255, 0.491);
+    /* Simplified single box shadow for better performance */
+    box-shadow: 0 2px 4px rgba(180, 180, 180, 0.3);
     font-family: var(--font-family-primary);
 }
 
 /* Tile Styling */
 .tile {
     position: absolute;
+    top: 0;
+    left: 0;
     width: var(--size-grid-cell);
     height: var(--size-grid-cell);
     border-radius: var(--radius-grid); /* Consistent radius */
@@ -334,15 +336,13 @@ main {
     color: var(--color-text-tile);
     font-family: var(--font-family-primary);
 
-    -webkit-text-stroke-width: 3px; /* Matched to text-stroke-width */
-    -webkit-text-stroke-color: var(--color-border-gridcell); /* Matched to text-stroke-color */
-    text-stroke-width: 3px; /* User specific value */
-    text-stroke-color: var(--color-border-gridcell); /* User value was rgb(232,232,232) which matches grid-cell border */
-    paint-order: stroke fill;
+    /* Simplified text stroke for better mobile performance */
+    text-shadow: 1px 1px 0 var(--color-border-gridcell), -1px -1px 0 var(--color-border-gridcell), 1px -1px 0 var(--color-border-gridcell), -1px 1px 0 var(--color-border-gridcell);
     border: 3px solid var(--color-border-gridcell);
-    box-shadow: 0 2px 2px var(--color-shadow-dark-soft),
-                inset 0 1px 0px rgba(255,255,255,0.1);
-    transition: background-color 0.1s ease-in-out, top 0.1s linear;
+    /* Simplified single box shadow for better performance */
+    box-shadow: 0 2px 4px var(--color-shadow-dark-soft);
+    transition: background-color 0.1s ease-in-out, transform 0.1s linear;
+    will-change: transform;
     z-index: 10;
 }
 
