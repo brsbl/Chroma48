@@ -144,21 +144,28 @@ const gameApi = {
         
         // Calculate from CSS and actual DOM
         const computedStyles = getComputedStyle(document.documentElement);
-        const gap = parseFloat(computedStyles.getPropertyValue('--gap-grid'));
+        const gap = parseFloat(computedStyles.getPropertyValue('--gap-grid')) || 10; // Fallback to 10 if NaN
         
+        let cellSize = 0;
         const firstGridCell = gridContainer.querySelector('.grid-cell');
-        let cellSize;
         if (firstGridCell) {
             cellSize = firstGridCell.offsetWidth;
-        } else {
-            // Fallback calculation if no grid cells exist
-            cellSize = parseFloat(computedStyles.getPropertyValue('--size-grid-cell'));
         }
+        
+        // If we couldn't get a valid cell size from DOM, calculate from CSS
+        if (!cellSize || cellSize <= 0) {
+            const cssSize = parseFloat(computedStyles.getPropertyValue('--size-grid-cell'));
+            cellSize = (cssSize && cssSize > 0) ? cssSize : 65; // Final fallback to 65
+        }
+        
+        // Ensure we never return invalid values
+        const validCellSize = Math.max(cellSize || 65, 30); // Minimum 30px
+        const validGap = Math.max(gap || 10, 5); // Minimum 5px
         
         // Cache the results
         dimensionCache = {
-            cellSize: cellSize,
-            cellGap: gap,
+            cellSize: validCellSize,
+            cellGap: validGap,
             valid: true
         };
         
@@ -171,9 +178,14 @@ const gameApi = {
 
     calculateTilePosition: function(row, col) {
         const { cellSize, cellGap } = this.getDimensions();
+        
+        // Safety check: ensure we have valid dimensions
+        const safeCellSize = Math.max(cellSize || 65, 30);
+        const safeCellGap = Math.max(cellGap || 10, 5);
+        
         return {
-            x: col * (cellSize + cellGap),
-            y: row * (cellSize + cellGap)
+            x: col * (safeCellSize + safeCellGap),
+            y: row * (safeCellSize + safeCellGap)
         };
     },
 
@@ -324,13 +336,14 @@ const gameApi = {
         const tile = document.createElement('div');
         tile.classList.add('tile');
         
-        // Calculate position synchronously
+        // Calculate position synchronously with safety checks
         const position = this.calculateTilePosition(row, col);
         const { cellSize } = this.getDimensions();
+        const safeCellSize = Math.max(cellSize || 65, 30); // Ensure minimum size
         
-        // Set size and position immediately (synchronous)
-        tile.style.width = `${cellSize}px`;
-        tile.style.height = `${cellSize}px`;
+        // Set size and position immediately (synchronous) with valid values
+        tile.style.width = `${safeCellSize}px`;
+        tile.style.height = `${safeCellSize}px`;
         tile.style.transform = `translate3d(${position.x}px, ${position.y}px, 0)`;
         
         gridContainer.appendChild(tile);
