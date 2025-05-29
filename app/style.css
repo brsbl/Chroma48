@@ -305,8 +305,7 @@ main {
 }
 
 .grid-cell {
-    /* width: var(--size-grid-cell); Removed to allow cell to fill CSS Grid track */
-    /* height: var(--size-grid-cell); Removed to allow cell to fill CSS Grid track */
+    /* Background cells fill their CSS Grid track */
     background-color: var(--color-background-container); /* Was var(--color-background-gridcell) */
     border-radius: var(--radius-grid); /* Consistent radius, was 12px */
     border: 3px solid var(--color-border-gridcell);
@@ -322,7 +321,8 @@ main {
 
 /* Tile Styling */
 .tile {
-    /* Use CSS Grid positioning instead of absolute positioning */
+    /* Use absolute positioning within the CSS Grid container */
+    position: absolute;
     border-radius: var(--radius-grid); /* Consistent radius */
     display: flex;
     justify-content: center;
@@ -338,7 +338,7 @@ main {
     /* Simplified single box shadow for better performance */
     box-shadow: 0 2px 4px var(--color-shadow-dark-soft);
     transition: background-color 0.1s ease-in-out;
-    z-index: 10;
+    z-index: 10; /* Ensure tiles appear above background cells */
 }
 
 /* Animation for when a tile merges */

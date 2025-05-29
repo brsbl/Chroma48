@@ -691,9 +691,8 @@ describe('ensureTileElement', () => {
         game._initializeDOMElements();
         game._resetModuleState({ isColorMode: false });
 
-        // No more dimension mocking needed - CSS Grid handles positioning
+        // Create background grid cells so positioning calculation works
         game.createBackgroundGrid();
-        gridContainerElement.innerHTML = ''; // Clear background cells for clean testing
     });
 
     test('should return null if gridContainer is not available', () => {
@@ -762,12 +761,14 @@ describe('ensureTileElement', () => {
         jest.useRealTimers();
     });
 
-    test('should correctly set CSS Grid position', () => {
+    test('should correctly position tiles with absolute positioning', () => {
         const tileElement = game.ensureTileElement(mockTileObject, mockRow, mockCol);
         
-        // With CSS Grid positioning, check grid position instead of width/height/transform
-        expect(tileElement.style.gridColumn).toBe((mockCol + 1).toString());
-        expect(tileElement.style.gridRow).toBe((mockRow + 1).toString());
+        // With absolute positioning, check for left/top/width/height properties
+        expect(tileElement.style.left).toBeTruthy(); // Should have a left position
+        expect(tileElement.style.top).toBeTruthy();  // Should have a top position
+        expect(tileElement.style.width).toBeTruthy(); // Should have width
+        expect(tileElement.style.height).toBeTruthy(); // Should have height
         
         // Verify tile content and styling
         expect(tileElement.classList.contains('tile')).toBe(true);
