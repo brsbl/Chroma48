@@ -682,20 +682,21 @@ describe('createBackgroundGrid', () => {
 
 describe('createTileElement', () => {
     let gridContainerElement;
-    const mockTileObject = { value: 2, color: '#FF0000' };
-    const mockRow = 1, mockCol = 2;
-    // These are for assertion, assuming createBackgroundGrid will lead to these if DOM is set up right
+    const mockTileObject = { value: 4, color: '#00FF00' };
+    const mockRow = 1;
+    const mockCol = 2;
     const expectedTestCellSize = 60; 
     const expectedTestCellGap = 10;
+    let originalGetComputedStyle, originalOffsetWidthDescriptor;
 
     beforeEach(() => {
-        document.body.innerHTML = '<div id="grid-container"></div>'; // Start with an empty grid container
+        document.body.innerHTML = '<div id="grid-container"></div>';
         gridContainerElement = document.getElementById('grid-container');
-        game._initializeDOMElements(); // gridContainer is now known to game
-        game._resetModuleState({ GRID_SIZE: 4, isColorMode: false }); // Added isColorMode for safety
+        game._initializeDOMElements();
+        game._resetModuleState({ isColorMode: false });
 
-        // Mock getComputedStyle for --gap-grid (this should be fine)
-        const originalGetComputedStyle = window.getComputedStyle;
+        // Mock getComputedStyle for --gap-grid and keep it active for the entire test
+        originalGetComputedStyle = window.getComputedStyle;
         window.getComputedStyle = (elt) => {
             const style = originalGetComputedStyle(elt);
             if (elt === document.documentElement) {
@@ -703,6 +704,7 @@ describe('createTileElement', () => {
                     ...style,
                     getPropertyValue: (prop) => {
                         if (prop === '--gap-grid') return `${expectedTestCellGap}px`;
+                        if (prop === '--size-grid-cell') return `${expectedTestCellSize}px`;
                         return style.getPropertyValue(prop);
                     }
                 };
@@ -711,7 +713,7 @@ describe('createTileElement', () => {
         };
 
         // Temporarily redefine HTMLElement.prototype.offsetWidth for .grid-cell elements
-        const originalOffsetWidthDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+        originalOffsetWidthDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
         Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
             configurable: true,
             get: function() {
@@ -725,15 +727,18 @@ describe('createTileElement', () => {
         });
 
         game.createBackgroundGrid(); // This should now use the mocked offsetWidth for its new cells
+        // Note: Don't restore mocks here - keep them active for the entire test
+    });
 
-        // Restore original offsetWidth behavior
+    afterEach(() => {
+        // Restore original behaviors after each test
         if (originalOffsetWidthDescriptor) {
             Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidthDescriptor);
         } else {
-            delete HTMLElement.prototype.offsetWidth; // If it wasn't there before (unlikely for offsetWidth)
+            delete HTMLElement.prototype.offsetWidth;
         }
-        
-        window.getComputedStyle = originalGetComputedStyle; // Restore
+        window.getComputedStyle = originalGetComputedStyle;
+        gridContainerElement.innerHTML = '';
     });
 
     test('should return null if gridContainer is not available in the game module', () => {
