@@ -2,6 +2,13 @@ const { TextEncoder, TextDecoder } = require('util');
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
+// Mock requestAnimationFrame for CI environments where it might not exist
+if (!global.requestAnimationFrame) {
+    global.requestAnimationFrame = (callback) => {
+        return setTimeout(callback, 0);
+    };
+}
+
 const game = require('../app/script.js');
 
 // Mocking localStorage for tests that might eventually use it (like bestScore)

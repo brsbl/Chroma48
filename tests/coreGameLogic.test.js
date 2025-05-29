@@ -1,5 +1,12 @@
 const game = require('../app/script.js');
 
+// Mock requestAnimationFrame for CI environments where it might not exist
+if (!global.requestAnimationFrame) {
+    global.requestAnimationFrame = (callback) => {
+        return setTimeout(callback, 0);
+    };
+}
+
 const localStorageMock = (() => {
     let store = {};
     return {
@@ -589,21 +596,24 @@ describe('setupGame', () => {
             // Mock requestAnimationFrame to execute callbacks immediately
             const originalRAF = global.requestAnimationFrame;
             global.requestAnimationFrame = jest.fn((callback) => {
-                setTimeout(callback, 0);
+                // Execute callback immediately in test environment
+                callback();
                 return 1;
             });
             
             const initialHTML = gridContainerElement.innerHTML;
             game.setupGame();
             
-            // Process any pending async operations
-            jest.runAllTimers();
-            
             expect(gridContainerElement.innerHTML).not.toBe(initialHTML);
             expect(gridContainerElement.querySelector('.grid-cell')).not.toBeNull();
             expect(gridContainerElement.querySelector('.tile')).not.toBeNull();
             
-            global.requestAnimationFrame = originalRAF;
+            // Restore original if it existed, otherwise delete the mock
+            if (originalRAF) {
+                global.requestAnimationFrame = originalRAF;
+            } else {
+                delete global.requestAnimationFrame;
+            }
         }
     });
 
