@@ -30,10 +30,6 @@ let dimensionCache = {
     valid: false
 };
 
-// Batched DOM updates
-let pendingDOMUpdates = [];
-let domUpdateScheduled = false;
-
 // DOM Element Variables - to be assigned in _initializeDOMElements
 let gameContainer, gridContainer, scoreDisplay, bestScoreDisplay, messageContainer, messageParagraph,
     restartButton, tryAgainButton, pauseButton, gameExplanation, viewportSettingsButton,
@@ -50,7 +46,7 @@ let settingsCurrentEditingSwatchIndex = -1;
 // --- Start gameApi Object Definition ---
 const gameApi = {
     jsConfettiInstance: null, // Added as a property
-    // --- Color Conversion and Mixing Helpers ---
+    // --- Simplified Color Helpers ---
     hexToRgb: function(hex) {
         let r = 0, g = 0, b = 0;
         if (hex.length === 4) {
@@ -65,71 +61,24 @@ const gameApi = {
         return { r, g, b };
     },
 
-    rgbToHsl: function(r, g, b) {
-        r /= 255; g /= 255; b /= 255;
-        const max = Math.max(r, g, b), min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
-
-        if (max === min) {
-            h = s = 0; 
-        } else {
-            const d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-            switch (max) {
-                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                case g: h = (b - r) / d + 2; break;
-                case b: h = (r - g) / d + 4; break;
-            }
-            h /= 6;
-        }
-        return { h: h * 360, s, l };
-    },
-
-    hslToRgb: function(h, s, l) {
-        let r, g, b;
-        h /= 360; 
-
-        if (s === 0) {
-            r = g = b = l; 
-        } else {
-            const hueToRgb = (p, q, t) => {
-                if (t < 0) t += 1;
-                if (t > 1) t -= 1;
-                if (t < 1 / 6) return p + (q - p) * 6 * t;
-                if (t < 1 / 2) return q;
-                if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-                return p;
-            };
-            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-            const p = 2 * l - q;
-            r = hueToRgb(p, q, h + 1 / 3);
-            g = hueToRgb(p, q, h);
-            b = hueToRgb(p, q, h - 1 / 3);
-        }
-        return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
-    },
-
     rgbToHex: function(r, g, b) {
         const toHex = (c) => {
-            const hex = c.toString(16);
+            const hex = Math.round(c).toString(16);
             return hex.length === 1 ? "0" + hex : hex;
         };
         return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
     },
 
     mixColors: function(hex1, hex2) {
-        const hsl1 = this.rgbToHsl(this.hexToRgb(hex1).r, this.hexToRgb(hex1).g, this.hexToRgb(hex1).b);
-        const hsl2 = this.rgbToHsl(this.hexToRgb(hex2).r, this.hexToRgb(hex2).g, this.hexToRgb(hex2).b);
-        const h1Rad = hsl1.h * Math.PI / 180;
-        const h2Rad = hsl2.h * Math.PI / 180;
-        const avgX = (Math.cos(h1Rad) + Math.cos(h2Rad)) / 2;
-        const avgY = (Math.sin(h1Rad) + Math.sin(h2Rad)) / 2;
-        let mixedH = Math.atan2(avgY, avgX) * 180 / Math.PI;
-        if (mixedH < 0) mixedH += 360;
-        const mixedS = (hsl1.s + hsl2.s) / 2;
-        const mixedL = (hsl1.l + hsl2.l) / 2;
-        const mixedRgb = this.hslToRgb(mixedH, mixedS, mixedL);
-        return this.rgbToHex(mixedRgb.r, mixedRgb.g, mixedRgb.b);
+        const rgb1 = this.hexToRgb(hex1);
+        const rgb2 = this.hexToRgb(hex2);
+        
+        // Simple RGB averaging
+        const mixedR = (rgb1.r + rgb2.r) / 2;
+        const mixedG = (rgb1.g + rgb2.g) / 2;
+        const mixedB = (rgb1.b + rgb2.b) / 2;
+        
+        return this.rgbToHex(mixedR, mixedG, mixedB);
     },
     // --- End Color Helpers ---
 
@@ -144,21 +93,28 @@ const gameApi = {
         
         // Calculate from CSS and actual DOM
         const computedStyles = getComputedStyle(document.documentElement);
-        const gap = parseFloat(computedStyles.getPropertyValue('--gap-grid'));
+        const gap = parseFloat(computedStyles.getPropertyValue('--gap-grid')) || 10; // Fallback to 10 if NaN
         
+        let cellSize = 0;
         const firstGridCell = gridContainer.querySelector('.grid-cell');
-        let cellSize;
         if (firstGridCell) {
             cellSize = firstGridCell.offsetWidth;
-        } else {
-            // Fallback calculation if no grid cells exist
-            cellSize = parseFloat(computedStyles.getPropertyValue('--size-grid-cell'));
         }
+        
+        // If we couldn't get a valid cell size from DOM, calculate from CSS
+        if (!cellSize || cellSize <= 0) {
+            const cssSize = parseFloat(computedStyles.getPropertyValue('--size-grid-cell'));
+            cellSize = (cssSize && cssSize > 0) ? cssSize : 65; // Final fallback to 65
+        }
+        
+        // Ensure we never return invalid values
+        const validCellSize = Math.max(cellSize || 65, 30); // Minimum 30px
+        const validGap = Math.max(gap || 10, 5); // Minimum 5px
         
         // Cache the results
         dimensionCache = {
-            cellSize: cellSize,
-            cellGap: gap,
+            cellSize: validCellSize,
+            cellGap: validGap,
             valid: true
         };
         
@@ -171,31 +127,15 @@ const gameApi = {
 
     calculateTilePosition: function(row, col) {
         const { cellSize, cellGap } = this.getDimensions();
+        
+        // Safety check: ensure we have valid dimensions
+        const safeCellSize = Math.max(cellSize || 65, 30);
+        const safeCellGap = Math.max(cellGap || 10, 5);
+        
         return {
-            x: col * (cellSize + cellGap),
-            y: row * (cellSize + cellGap)
+            x: col * (safeCellSize + safeCellGap),
+            y: row * (safeCellSize + safeCellGap)
         };
-    },
-
-    scheduleDOMUpdate: function(updateFn) {
-        pendingDOMUpdates.push(updateFn);
-        if (!domUpdateScheduled) {
-            domUpdateScheduled = true;
-            requestAnimationFrame(() => {
-                this.flushDOMUpdates();
-                domUpdateScheduled = false;
-            });
-        }
-    },
-
-    flushDOMUpdates: function() {
-        const updates = pendingDOMUpdates.splice(0);
-        updates.forEach(updateFn => updateFn());
-    },
-
-    markGridDirty: function() {
-        // Deprecated - use drawGrid() directly or scheduleDOMUpdate for batching
-        this.drawGrid();
     },
 
     setupGame: function() {
@@ -318,56 +258,56 @@ const gameApi = {
         if (tryAgainButton) tryAgainButton.textContent = 'Try Again';
     },
 
-    createTileElement: function(tileObject, row, col) {
+    ensureTileElement: function(tileData, row, col) {
         if (!gridContainer) return null;
-
-        const tile = document.createElement('div');
-        tile.classList.add('tile');
         
-        // Calculate position synchronously
-        const position = this.calculateTilePosition(row, col);
-        const { cellSize } = this.getDimensions();
+        let tileDOM = tileDOMElements[row][col];
         
-        // Set size and position immediately (synchronous)
-        tile.style.width = `${cellSize}px`;
-        tile.style.height = `${cellSize}px`;
-        tile.style.transform = `translate3d(${position.x}px, ${position.y}px, 0)`;
-        
-        gridContainer.appendChild(tile);
-        return tile;
-    },
-
-    // NEW HELPER FUNCTION to update an existing tile's DOM properties or a newly created one
-    updateTileElement: function(tileDOM, tileData, isNew) {
-        if (!tileData) { // Should remove tile if tileData is null
-            if (tileDOM && tileDOM.parentNode) {
+        // Handle tile removal
+        if (!tileData) {
+            if (tileDOM?.parentNode) {
                 tileDOM.parentNode.removeChild(tileDOM);
             }
+            tileDOMElements[row][col] = null;
             return null;
         }
-
-        // Update value-specific class
-        tileDOM.className = 'tile'; // Reset classes then add specific one
-        tileDOM.classList.add(`tile-${tileData.value > 2048 ? 'super' : tileData.value}`);
-
-        if (isColorMode) {
-            tileDOM.textContent = '';
-        } else {
-            tileDOM.textContent = tileData.value;
+        
+        // Create tile if it doesn't exist
+        if (!tileDOM) {
+            tileDOM = document.createElement('div');
+            tileDOM.classList.add('tile');
+            
+            // Set initial size and position
+            const { cellSize } = this.getDimensions();
+            const position = this.calculateTilePosition(row, col);
+            const safeCellSize = Math.max(cellSize || 65, 30);
+            
+            tileDOM.style.width = `${safeCellSize}px`;
+            tileDOM.style.height = `${safeCellSize}px`;
+            tileDOM.style.transform = `translate3d(${position.x}px, ${position.y}px, 0)`;
+            
+            gridContainer.appendChild(tileDOM);
+            tileDOMElements[row][col] = tileDOM;
         }
+        
+        // Update tile properties
+        tileDOM.className = 'tile'; // Reset classes
+        tileDOM.classList.add(`tile-${tileData.value > 2048 ? 'super' : tileData.value}`);
+        
+        tileDOM.textContent = isColorMode ? '' : tileData.value;
         tileDOM.style.backgroundColor = tileData.color;
         
+        // Handle merge animation
         if (tileData.isNewlyMerged) {
             tileDOM.classList.add('tile-just-merged');
-            const currentGridTileObject = tileData; // Capture tileData for the timeout
             setTimeout(() => {
-                if (tileDOM.parentNode && tileDOM.classList.contains('tile-just-merged')) {
-                     tileDOM.classList.remove('tile-just-merged');
+                if (tileDOM?.parentNode?.contains(tileDOM)) {
+                    tileDOM.classList.remove('tile-just-merged');
                 }
-                // Check if the tile data object still exists and has the flag before deleting
-                if (currentGridTileObject) delete currentGridTileObject.isNewlyMerged; 
-            }, 150); 
+                delete tileData.isNewlyMerged;
+            }, 150);
         }
+        
         return tileDOM;
     },
 
@@ -377,29 +317,15 @@ const gameApi = {
         for (let r = 0; r < GRID_SIZE; r++) {
             for (let c = 0; c < GRID_SIZE; c++) {
                 const tileData = grid[r][c];
-                let tileDOM = tileDOMElements[r][c];
-
-                if (tileData) {
-                    // Calculate position synchronously
+                const tileDOM = this.ensureTileElement(tileData, r, c);
+                
+                // Update position if tile exists and position may have changed
+                if (tileDOM && tileData) {
                     const position = this.calculateTilePosition(r, c);
                     const expectedTransform = `translate3d(${position.x}px, ${position.y}px, 0)`;
-
-                    if (!tileDOM) { 
-                        // Tile data exists, but no DOM element -> create it immediately
-                        tileDOM = this.createTileElement(tileData, r, c);
-                        tileDOMElements[r][c] = this.updateTileElement(tileDOM, tileData, true);
-                    } else {
-                        // Tile DOM exists, update its properties and position
-                        tileDOMElements[r][c] = this.updateTileElement(tileDOM, tileData, false);
-                        // Update position immediately if it changed
-                        if (tileDOM.style.transform !== expectedTransform) {
-                            tileDOM.style.transform = expectedTransform;
-                        }
-                    }
-                } else {
-                    // No tile data, ensure no DOM element exists
-                    if (tileDOM) {
-                        tileDOMElements[r][c] = this.updateTileElement(tileDOM, null, false);
+                    
+                    if (tileDOM.style.transform !== expectedTransform) {
+                        tileDOM.style.transform = expectedTransform;
                     }
                 }
             }
@@ -477,153 +403,92 @@ const gameApi = {
         this.drawGrid(); // Direct call for immediate visual updates
     },
 
-    moveTilesLeft: function() {
+    // Unified tile movement and merging logic
+    moveAndMergeTiles: function(direction) {
         let boardChanged = false;
-        for (let r = 0; r < GRID_SIZE; r++) {
-            const originalRowObjects = [...grid[r]];
-            let compactRow = grid[r].filter(cell => cell !== null);
-            for (let i = 0; i < compactRow.length - 1; i++) {
-                let canMerge = false;
-                if (isColorMode) {
-                    canMerge = compactRow[i].color === compactRow[i+1].color;
-                } else {
-                    canMerge = compactRow[i].value === compactRow[i+1].value;
-                }
+        const isHorizontal = direction === 'left' || direction === 'right';
+        const isReverse = direction === 'right' || direction === 'down';
+        const size = GRID_SIZE;
+        
+        for (let primaryIdx = 0; primaryIdx < size; primaryIdx++) {
+            // Extract row or column based on direction
+            const originalLine = [];
+            for (let secondaryIdx = 0; secondaryIdx < size; secondaryIdx++) {
+                const [r, c] = isHorizontal ? [primaryIdx, secondaryIdx] : [secondaryIdx, primaryIdx];
+                originalLine.push(grid[r][c]);
+            }
+            
+            // Compact and merge
+            let workingLine = originalLine.filter(cell => cell !== null);
+            if (isReverse) workingLine.reverse();
+            
+            // Merge adjacent tiles
+            for (let i = 0; i < workingLine.length - 1; i++) {
+                const canMerge = isColorMode 
+                    ? workingLine[i].color === workingLine[i + 1].color
+                    : workingLine[i].value === workingLine[i + 1].value;
+                    
                 if (canMerge) {
-                    const mergedValue = compactRow[i].value * 2;
-                    let mergedColor = isColorMode ? compactRow[i].color : this.mixColors(compactRow[i].color, compactRow[i+1].color);
-                    compactRow[i] = { value: mergedValue, color: mergedColor, isNewlyMerged: true };
+                    const mergedValue = workingLine[i].value * 2;
+                    const mergedColor = isColorMode 
+                        ? workingLine[i].color 
+                        : this.mixColors(workingLine[i].color, workingLine[i + 1].color);
+                    
+                    workingLine[i] = { value: mergedValue, color: mergedColor, isNewlyMerged: true };
                     this.updateScore(mergedValue);
-                    compactRow.splice(i + 1, 1);
+                    workingLine.splice(i + 1, 1);
                 }
             }
-            const newRow = Array(GRID_SIZE).fill(null);
-            for (let i = 0; i < compactRow.length; i++) newRow[i] = compactRow[i];
-            for (let c = 0; c < GRID_SIZE; c++) {
-                if ((originalRowObjects[c] === null && newRow[c] !== null) ||
-                    (originalRowObjects[c] !== null && newRow[c] === null) ||
-                    (originalRowObjects[c] !== null && newRow[c] !== null && 
-                     (originalRowObjects[c].value !== newRow[c].value || originalRowObjects[c].color !== newRow[c].color))) {
+            
+            // Restore direction and pad with nulls
+            if (isReverse) workingLine.reverse();
+            const newLine = Array(size).fill(null);
+            
+            if (isReverse) {
+                // For right/down: tiles should be at the end
+                for (let i = 0; i < workingLine.length; i++) {
+                    newLine[size - workingLine.length + i] = workingLine[i];
+                }
+            } else {
+                // For left/up: tiles should be at the beginning
+                for (let i = 0; i < workingLine.length; i++) {
+                    newLine[i] = workingLine[i];
+                }
+            }
+            
+            // Update grid and check for changes
+            for (let secondaryIdx = 0; secondaryIdx < size; secondaryIdx++) {
+                const [r, c] = isHorizontal ? [primaryIdx, secondaryIdx] : [secondaryIdx, primaryIdx];
+                const oldTile = originalLine[secondaryIdx];
+                const newTile = newLine[secondaryIdx];
+                
+                if ((oldTile === null && newTile !== null) ||
+                    (oldTile !== null && newTile === null) ||
+                    (oldTile !== null && newTile !== null && 
+                     (oldTile.value !== newTile.value || oldTile.color !== newTile.color))) {
                     boardChanged = true;
                 }
-                grid[r][c] = newRow[c];
+                grid[r][c] = newTile;
             }
         }
+        
         return boardChanged;
+    },
+
+    moveTilesLeft: function() {
+        return this.moveAndMergeTiles('left');
     },
 
     moveTilesRight: function() {
-        let boardChanged = false;
-        for (let r = 0; r < GRID_SIZE; r++) {
-            const originalRowObjects = [...grid[r]];
-            let currentRow = [...grid[r]].reverse();
-            let compactRow = currentRow.filter(cell => cell !== null);
-            for (let i = 0; i < compactRow.length - 1; i++) {
-                let canMerge = false;
-                if (isColorMode) {
-                    canMerge = compactRow[i].color === compactRow[i+1].color;
-                } else {
-                    canMerge = compactRow[i].value === compactRow[i+1].value;
-                }
-                if (canMerge) {
-                    const mergedValue = compactRow[i].value * 2;
-                    let mergedColor = isColorMode ? compactRow[i].color : this.mixColors(compactRow[i].color, compactRow[i+1].color);
-                    compactRow[i] = { value: mergedValue, color: mergedColor, isNewlyMerged: true };
-                    this.updateScore(mergedValue);
-                    compactRow.splice(i + 1, 1); 
-                }
-            }
-            const processedRow = Array(GRID_SIZE).fill(null);
-            for (let i = 0; i < compactRow.length; i++) processedRow[i] = compactRow[i];
-            const newRow = processedRow.reverse();
-            for (let c = 0; c < GRID_SIZE; c++) {
-                 if ((originalRowObjects[c] === null && newRow[c] !== null) ||
-                    (originalRowObjects[c] !== null && newRow[c] === null) ||
-                    (originalRowObjects[c] !== null && newRow[c] !== null && 
-                     (originalRowObjects[c].value !== newRow[c].value || originalRowObjects[c].color !== newRow[c].color))) {
-                    boardChanged = true;
-                }
-                grid[r][c] = newRow[c];
-            }
-        }
-        return boardChanged;
+        return this.moveAndMergeTiles('right');
     },
 
     moveTilesUp: function() {
-        let boardChanged = false;
-        for (let c_idx = 0; c_idx < GRID_SIZE; c_idx++) { 
-            const originalColumnObjects = [];
-            for(let r_idx = 0; r_idx < GRID_SIZE; r_idx++) originalColumnObjects.push(grid[r_idx][c_idx]);
-            let compactColumn = [];
-            for (let r_idx = 0; r_idx < GRID_SIZE; r_idx++) if (grid[r_idx][c_idx] !== null) compactColumn.push(grid[r_idx][c_idx]);
-            for (let i = 0; i < compactColumn.length - 1; i++) {
-                let canMerge = false;
-                if (isColorMode) {
-                    canMerge = compactColumn[i].color === compactColumn[i+1].color;
-                } else {
-                    canMerge = compactColumn[i].value === compactColumn[i+1].value;
-                }
-                if (canMerge) {
-                    const mergedValue = compactColumn[i].value * 2;
-                    let mergedColor = isColorMode ? compactColumn[i].color : this.mixColors(compactColumn[i].color, compactColumn[i+1].color);
-                    compactColumn[i] = { value: mergedValue, color: mergedColor, isNewlyMerged: true };
-                    this.updateScore(mergedValue);
-                    compactColumn.splice(i + 1, 1);
-                }
-            }
-            const newColumn = Array(GRID_SIZE).fill(null);
-            for (let i = 0; i < compactColumn.length; i++) newColumn[i] = compactColumn[i];
-            for (let r_idx = 0; r_idx < GRID_SIZE; r_idx++) {
-                if ((originalColumnObjects[r_idx] === null && newColumn[r_idx] !== null) ||
-                    (originalColumnObjects[r_idx] !== null && newColumn[r_idx] === null) ||
-                    (originalColumnObjects[r_idx] !== null && newColumn[r_idx] !== null && 
-                     (originalColumnObjects[r_idx].value !== newColumn[r_idx].value || originalColumnObjects[r_idx].color !== newColumn[r_idx].color))) {
-                    boardChanged = true;
-                }
-                grid[r_idx][c_idx] = newColumn[r_idx];
-            }
-        }
-        return boardChanged;
+        return this.moveAndMergeTiles('up');
     },
 
     moveTilesDown: function() {
-        let boardChanged = false;
-        for (let c_idx = 0; c_idx < GRID_SIZE; c_idx++) { 
-            const originalColumnObjects = [];
-            for(let r_idx = 0; r_idx < GRID_SIZE; r_idx++) originalColumnObjects.push(grid[r_idx][c_idx]);
-            let currentCol = [];
-            for (let r_idx = 0; r_idx < GRID_SIZE; r_idx++) currentCol.push(grid[r_idx][c_idx]);
-            currentCol.reverse(); 
-            let compactColumn = currentCol.filter(cell => cell !== null);
-            for (let i = 0; i < compactColumn.length - 1; i++) {
-                let canMerge = false;
-                if (isColorMode) {
-                    canMerge = compactColumn[i].color === compactColumn[i+1].color;
-                } else {
-                    canMerge = compactColumn[i].value === compactColumn[i+1].value;
-                }
-                if (canMerge) {
-                    const mergedValue = compactColumn[i].value * 2;
-                    let mergedColor = isColorMode ? compactColumn[i].color : this.mixColors(compactColumn[i].color, compactColumn[i+1].color);
-                    compactColumn[i] = { value: mergedValue, color: mergedColor, isNewlyMerged: true };
-                    this.updateScore(mergedValue);
-                    compactColumn.splice(i + 1, 1);
-                }
-            }
-            const processedReversedColumn = Array(GRID_SIZE).fill(null);
-            for (let i = 0; i < compactColumn.length; i++) processedReversedColumn[i] = compactColumn[i];
-            const newColumn = processedReversedColumn.reverse();
-            for (let r_idx = 0; r_idx < GRID_SIZE; r_idx++) {
-                 if ((originalColumnObjects[r_idx] === null && newColumn[r_idx] !== null) ||
-                    (originalColumnObjects[r_idx] !== null && newColumn[r_idx] === null) ||
-                    (originalColumnObjects[r_idx] !== null && newColumn[r_idx] !== null && 
-                     (originalColumnObjects[r_idx].value !== newColumn[r_idx].value || originalColumnObjects[r_idx].color !== newColumn[r_idx].color))) {
-                    boardChanged = true;
-                }
-                grid[r_idx][c_idx] = newColumn[r_idx];
-            }
-        }
-        return boardChanged;
+        return this.moveAndMergeTiles('down');
     },
 
     handleUserKeyPress: function(event) {
@@ -994,6 +859,7 @@ const gameApi = {
         GRID_SIZE = initialTestState.GRID_SIZE !== undefined ? initialTestState.GRID_SIZE : 4;
         TILE_COLORS = initialTestState.TILE_COLORS ? [...initialTestState.TILE_COLORS] : [...TILE_COLORS_DEFAULT];
         grid = initialTestState.grid ? JSON.parse(JSON.stringify(initialTestState.grid)) : Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
+        tileDOMElements = initialTestState.tileDOMElements ? initialTestState.tileDOMElements : Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null));
         activeFallingTile = initialTestState.activeFallingTile ? JSON.parse(JSON.stringify(initialTestState.activeFallingTile)) : null;
         score = initialTestState.score !== undefined ? initialTestState.score : 0;
         let bs = localStorage.getItem('bestScore') ? parseInt(localStorage.getItem('bestScore')) : 0;
@@ -1011,8 +877,6 @@ const gameApi = {
         
         // Reset caching systems
         dimensionCache.valid = false;
-        pendingDOMUpdates.length = 0;
-        domUpdateScheduled = false;
         
         if (scoreDisplay) scoreDisplay.textContent = score.toLocaleString();
         if (bestScoreDisplay) bestScoreDisplay.textContent = bestScore.toLocaleString();
