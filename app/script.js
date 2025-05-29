@@ -75,6 +75,30 @@ const gameApi = {
     },
     // --- End Color Helpers ---
 
+    // Calculate tile position within CSS Grid
+    calculateTilePosition: function(row, col) {
+        if (!gridContainer) {
+            return { x: 0, y: 0 };
+        }
+        
+        // Get the actual CSS Grid cell size and gap from computed styles
+        const gridStyle = getComputedStyle(gridContainer);
+        const gap = parseFloat(gridStyle.gap) || 10;
+        
+        // Get the actual size of a grid cell
+        const firstCell = gridContainer.querySelector('.grid-cell');
+        if (!firstCell) {
+            return { x: 0, y: 0 };
+        }
+        
+        const cellSize = firstCell.offsetWidth;
+        
+        return {
+            x: col * (cellSize + gap),
+            y: row * (cellSize + gap)
+        };
+    },
+
     setupGame: function() {
         isPaused = false;
         if(pauseButton) pauseButton.innerHTML = '<img src="icons/Pause.png" alt="Pause" class="button-icon">Pause';
@@ -210,11 +234,6 @@ const gameApi = {
         if (!tileDOM) {
             tileDOM = document.createElement('div');
             tileDOM.classList.add('tile');
-            
-            // Use CSS Grid positioning instead of transform
-            tileDOM.style.gridColumn = col + 1;
-            tileDOM.style.gridRow = row + 1;
-            
             gridContainer.appendChild(tileDOM);
             tileDOMElements[row][col] = tileDOM;
         }
@@ -226,9 +245,17 @@ const gameApi = {
         tileDOM.textContent = isColorMode ? '' : tileData.value;
         tileDOM.style.backgroundColor = tileData.color;
         
-        // Update grid position in case tile moved
-        tileDOM.style.gridColumn = col + 1;
-        tileDOM.style.gridRow = row + 1;
+        // Position tile using absolute positioning
+        const position = this.calculateTilePosition(row, col);
+        tileDOM.style.left = position.x + 'px';
+        tileDOM.style.top = position.y + 'px';
+        
+        // Set tile dimensions to match grid cells
+        const firstCell = gridContainer.querySelector('.grid-cell');
+        if (firstCell) {
+            tileDOM.style.width = firstCell.offsetWidth + 'px';
+            tileDOM.style.height = firstCell.offsetHeight + 'px';
+        }
         
         // Handle merge animation
         if (tileData.isNewlyMerged) {
