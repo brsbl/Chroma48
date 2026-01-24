@@ -4,6 +4,31 @@
 
 Chroma48 is a web-based puzzle game that creatively combines the mechanics of the classic 2048 game with a Tetris-like tile-falling dynamic. Players aim to merge tiles of the same number (or color, depending on the selected mode) to achieve the highest possible score before the game board fills up. The game is designed to be responsive and playable across various screen sizes, offering customizable color palettes and game modes. A "BETA" pill is displayed next to the game title, indicating its current development stage.
 
+## Project Structure
+
+The codebase follows a modular ES modules architecture:
+
+```
+src/
+├── index.js           # Main entry point and game initialization
+├── state/             # Centralized state management
+│   └── gameState.js   # Single source of truth for all game state
+├── game/              # Core game logic
+│   ├── board.js       # Board rendering and grid management
+│   ├── loop.js        # Game loop and tile spawning
+│   ├── movement.js    # 2048-style tile movement and merging
+│   └── lifecycle.js   # Game setup, pause, and game over handling
+├── ui/                # UI rendering and modals
+│   ├── modals.js      # Settings and instructions modal logic
+│   └── effects.js     # Visual effects (confetti, animations)
+├── input/             # User input handlers
+│   └── handlers.js    # Keyboard and touch event processing
+├── settings/          # Settings persistence
+│   └── storage.js     # localStorage interactions
+└── utils/             # Utility functions
+    └── colors.js      # Color conversion and mixing utilities
+```
+
 ## Architecture
 
 The application is built using standard web technologies: HTML, CSS, and JavaScript.
@@ -38,21 +63,23 @@ The CSS file is responsible for all visual styling, layout, and responsiveness o
 *   **Visual Theming:** Defines colors for the background, text, buttons, tiles, and modal elements.
 *   **Animations/Transitions:** Subtle transitions for button hovers, tile movements, modal/drawer reveals, and a confetti effect for new high scores (powered by `JSConfetti`).
 
-### 3. JavaScript (`app/script.js`)
+### 3. JavaScript (Modular ES Modules)
 
-This file contains all the game logic, DOM manipulation, event handling, and state management, largely encapsulated within a `gameApi` object. Key functionalities of `gameApi` include:
+The game logic is organized into focused modules within the `src/` directory, bundled using esbuild for production. Key architectural patterns include:
 
-*   **Initialization (`DOMContentLoaded`):** Sets up constants, fetches DOM elements, initializes game state variables (score, best score from `localStorage`, game mode, tile colors), and calls `setupGame()` to begin. Integrates with `JSConfetti` for visual effects.
-*   **Color Manipulation Utilities:** Helper functions for color format conversions and mixing.
-*   **Game State Management:** Module-scoped variables track the current game state. `bestScore`, `tileColors` (on save), and `isColorMode` (on save) are persisted using `localStorage`.
-*   **Core Game Loop (`gameLoop`, `spawnNewFallingTile`):** Manages tile spawning and falling.
-*   **Board and Tile Rendering (`createBackgroundGrid`, `createTileElement`, `drawGrid`):** Dynamically creates and updates the visual game board.
-*   **2048-style Tile Movement and Merging (`moveTilesLeft`, `moveTilesRight`, `moveTilesUp`, `moveTilesDown`):** Handles core game mechanics.
-*   **User Input Handling (`handleUserKeyPress`, touch handlers):** Processes keyboard and touch inputs.
-*   **Game Lifecycle Controls (`setupGame`, `handleGameOver`, `togglePauseGame`):** Manages game start, end, and pause states.
-*   **Settings Modal Logic (`openSettingsModal`, `closeSettingsModal`, `saveSettings`, `populateSettingsColorPalette`):** Manages settings configuration.
-*   **Instructions Drawer/Modal Logic (`showInstructionsModal`):** Handles the display of game instructions.
-*   **Visual Effects (`triggerConfettiEffect`):** Manages confetti display using `JSConfetti`.
+*   **Centralized State Management:** All game state is managed through `src/state/gameState.js`, providing a single source of truth with getter/setter functions to prevent scattered state mutations.
+*   **ES Modules Architecture:** Each module has a single responsibility, improving maintainability and testability.
+*   **esbuild Bundler:** Fast builds (~50ms) with tree-shaking and minification for production.
+
+Key functionalities organized by module:
+
+*   **Initialization (`src/index.js`):** Entry point that initializes all modules, sets up event listeners, and starts the game.
+*   **State (`src/state/`):** Centralized game state including score, best score, game mode, tile colors, and board state.
+*   **Game Logic (`src/game/`):** Core mechanics including board rendering, game loop, tile movement/merging, and lifecycle management.
+*   **UI (`src/ui/`):** Modal handling, visual effects, and DOM updates.
+*   **Input (`src/input/`):** Keyboard and touch event processing.
+*   **Settings (`src/settings/`):** localStorage persistence for user preferences.
+*   **Utilities (`src/utils/`):** Color manipulation helpers (HSL/RGB/Hex conversions, color mixing).
 
 ## Functionality Details
 
@@ -85,7 +112,7 @@ This file contains all the game logic, DOM manipulation, event handling, and sta
 *   The current score is displayed and updated after each successful merge.
 *   The best score achieved is also displayed and saved to the browser's `localStorage`, persisting across sessions.
 *   A visual glow effect is applied to the best score and current score displays when a new high score is achieved or the Cmd/Ctrl+E debug command is used.
-*   A "New High Score! 🎉" message is displayed on the game over screen if the `newBestScoreAchievedThisGame` flag is true (set either by achieving a new high score or by the Cmd/Ctrl+E command).
+*   A "New High Score!" message is displayed on the game over screen if the `newBestScoreAchievedThisGame` flag is true (set either by achieving a new high score or by the Cmd/Ctrl+E command).
 
 ### Pause/Resume
 *   The "Pause" button halts the falling of the active tile and any game interactions.
@@ -128,9 +155,47 @@ The following keyboard shortcuts are available for local debugging purposes:
 *   **Cmd/Ctrl + E**: Triggers the new high score confetti animation, applies a visual glow to score displays, and sets a flag (`newBestScoreAchievedThisGame`) that can influence the game over message. This command does not modify the actual score.
 *   **Cmd/Ctrl + G**: Triggers the Game Over screen immediately.
 
+## Development
+
+### Prerequisites
+*   Node.js (v16 or higher recommended)
+*   npm
+
+### Getting Started
+```bash
+# Install dependencies
+npm install
+
+# Build for development (with source maps)
+npm run build:dev
+
+# Build for production
+npm run build
+
+# Watch mode for development
+npm run watch
+
+# Run tests
+npm test
+```
+
+### npm Scripts
+| Command | Description |
+|---------|-------------|
+| `npm run build` | Build production bundle (minified) |
+| `npm run build:dev` | Build with source maps for debugging |
+| `npm run watch` | Watch mode - rebuilds on file changes |
+| `npm test` | Run 154+ tests across all test suites |
+
+### Technical Details
+*   **Bundler:** esbuild for fast builds (~50ms build time)
+*   **Module System:** ES modules with tree-shaking
+*   **State Management:** Centralized state pattern (no external libraries)
+*   **Testing:** Jest with jsdom for DOM testing
+
 ## Testing
 
-The project includes a suite of automated tests using Jest to ensure code quality and prevent regressions.
+The project includes a comprehensive suite of 154+ automated tests using Jest to ensure code quality and prevent regressions.
 
 ### Test Suites:
 *   **`tests/colorUtils.test.js`**: Focuses on unit testing the color conversion and mixing utility functions.
@@ -150,4 +215,3 @@ Tests can be run from the project root using the command:
 npm test
 ```
 All tests must pass before changes are committed and pushed to the main repository branch.
-
