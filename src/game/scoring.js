@@ -21,10 +21,9 @@ export function triggerConfettiEffect() {
   const confettiInstance = getConfettiInstance();
   if (confettiInstance) {
     confettiInstance.addConfetti({
-      emojis: ['🎉'],
-      confettiNumber: 150,
-      emojiSize: 24,
-      confettiRadius: 60,
+      confettiColors: ['#F67B7B', '#64D18C', '#FFB347', '#87CEEB', '#d7d7d7'],
+      confettiNumber: 100,
+      confettiRadius: 5,
     });
   }
 }

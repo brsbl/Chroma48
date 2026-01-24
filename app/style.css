@@ -184,8 +184,8 @@ main {
 #best-score.best-score-glow,
 #score.current-score-glow {
     text-shadow:
-        0 0 4px rgba(255, 255, 255, 0.4),   /* Subtle white glow */
-        0 0 8px rgba(201, 216, 141, 0.5);   /* Subtle green glow */
+        0 0 4px rgba(255, 255, 255, 0.5),   /* White glow */
+        0 0 8px rgba(180, 180, 180, 0.4);   /* Light grey glow */
 }
 
 /* Game Controls Area (formerly .above-game) */
