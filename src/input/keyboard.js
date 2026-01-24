@@ -10,15 +10,6 @@
 
 import gameState, { getDOMElements } from '../state/gameState.js';
 
-// =============================================================================
-// PLACEHOLDER IMPORTS - Movement functions to be created
-// =============================================================================
-
-// TODO: Import these from movement module when created
-// import { moveTilesUp, moveTilesDown, moveTilesLeft, moveTilesRight } from '../movement/tiles.js';
-// import { spawnNewFallingTile } from '../movement/spawn.js';
-// import { isBoardFull } from '../grid/board.js';
-
 /**
  * Placeholder for movement functions - will be injected or imported
  * @type {Object|null}
