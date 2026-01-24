@@ -20,7 +20,8 @@ import {
   handleGameOver,
   togglePauseGame,
   setDrawGridFn,
-  setCreateBackgroundGridFn
+  setCreateBackgroundGridFn,
+  isBoardFull
 } from './game/core.js';
 
 // Movement logic imports
@@ -105,6 +106,7 @@ const gameApi = {
   togglePauseGame,
   setDrawGridFn,
   setCreateBackgroundGridFn,
+  isBoardFull,
 
   // Movement
   moveTilesLeft,
@@ -200,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Register close instructions button click handler
-  registerEventListener(elements.closeInstructionsButton, 'click', () => {
+  registerEventListener(elements.closeInstructionsButton_collapsible, 'click', () => {
     showInstructionsModal(false);
   });
 

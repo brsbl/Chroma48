@@ -259,10 +259,6 @@
     border-style: var(--tw-border-style);
     border-width: 1px;
   }
-  .text-base {
-    font-size: var(--text-base);
-    line-height: var(--tw-leading, var(--text-base--line-height));
-  }
   .shadow {
     --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
@@ -499,6 +495,7 @@ main {
 .palette-toggle-button {
   padding: var(--padding-button-main);
   border-radius: var(--radius-button-main);
+  background-color: var(--color-button-pause-bg);
   color: var(--color-text-button-light);
   font-size: 1.2em;
   line-height: 1;
