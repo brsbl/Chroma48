@@ -1,0 +1,1061 @@
+/* Global Reset and Box Sizing */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%; /* Prevent font scaling in landscape */
+    scroll-behavior: smooth;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+:root {
+    /* Fonts */
+    --font-family-primary: 'Inter', sans-serif;
+    --font-family-monospace: monospace;
+    --font-weight-regular: 400;
+    --font-weight-bold: 700;
+
+    /* Colors - Base Palette */
+    --color-background-body: #faf8ef;
+    --color-background-container: #EDEDED; /* Base for light gray elements */
+    --color-background-game: #fbf7f4;
+    --color-background-scorebox: #d7d7d7;
+    --color-overlay-message: rgba(245, 238, 232, 0.73);
+    --color-overlay-backdrop: rgba(0, 0, 0, 0.6); /* New */
+    --color-overlay-text-backdrop: rgba(0, 0, 0, 0.5); /* New */
+
+    /* Colors - Text */
+    --color-text-base: #696762; /* New base text color */
+    --color-text-score-label: #a19987;
+    --color-text-score-number: #ffffff;
+    --color-text-button-light: #f9f6f2;
+    --color-text-button-dark: #979797; /* For pause button */
+    --color-text-tile: #ffffff; 
+    --color-text-modal-close-hover: #7b7365; /* New - Darker for hover */
+
+    /* Colors - Buttons */
+    --color-button-restart-bg: #F67B7B;
+    --color-button-restart-hover-bg: #f77171;
+    --color-button-pause-bg: #E2E2E2;
+    --color-button-pause-hover-bg: #D4D4D4;
+    --color-button-switch-bg: #64D18C;
+    --color-button-switch-hover-bg: #45d078;
+    --color-button-retry-bg: #8f7a66;
+    --color-button-retry-hover-bg: #9f8b77;
+
+    /* Colors - Borders & Strokes */
+    --color-border-gridcell: rgb(232, 232, 232); /* #E8E8E8 */
+    --color-border-subtle: #dbdbdb; /* New */
+    --color-tile-text-stroke: #333333; 
+
+    /* Colors - Shadows */
+    --color-shadow-dark-soft: rgba(0, 0, 0, 0.1); /* New */
+
+    /* Sizing & Spacing */
+    --padding-container: clamp(10px, 3vw, 20px);
+    --padding-button-main: clamp(6px, 1.5vw, 9px) clamp(12px, 2.5vw, 18px); /* Increased padding */
+    --padding-button-retry: clamp(3px, 0.8vw, 5px) clamp(6px, 1.5vw, 10px);
+    --radius-container: 6px;
+    --radius-button-main: 5px;
+    --radius-button-retry: 2px;
+    --radius-grid: 12px;
+    --gap-grid: 10px; /* Reduced gap slightly for smaller screens */
+    --padding-game-container: 10px; /* Padding around the grid container */
+    
+    /* --size-grid-cell will be calculated by JS based on grid-container width */
+    /* For CSS grid layout, we can use fr units or let JS set this variable */
+    --size-grid-cell: 65px; /* Default/fallback, JS will override based on actual size */
+
+    --tile-text-stroke-width: 1px; /* Default, user changed text-stroke to 3px for .tile */
+
+    /* Settings Modal Font Sizes */
+    --settings-modal-title-font-size: 1em; /* Base size for settings modal title */
+}
+
+/* General Body Styles */
+body {
+    font-family: var(--font-family-primary);
+    font-weight: var(--font-weight-regular);
+    background-color: var(--color-background-body);
+    color: var(--color-text-base);
+    margin: 0;
+    padding: var(--padding-container);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 100vh;
+    text-align: center;
+}
+
+header { /* For the main H1 title */
+    margin-bottom: clamp(15px, 4vh, 20px); /* Responsive margin */
+    display: flex; /* Added to help center the image if needed */
+    justify-content: center; /* Added to help center the image */
+    align-items: center;
+    width: max-content; /* Changed from 500px to allow header to shrink to its content */
+}
+
+.header-content-wrapper {
+    display: flex;
+    align-items: center; /* Vertically align logo and text */
+    justify-content: center; /* Center them as a group */
+    gap: clamp(8px, 2vw, 12px); /* Responsive gap */
+    margin: 10px;
+}
+
+#header-logo {
+    max-height: clamp(36px, 8vw, 48px); /* Responsive max height */
+    width: auto; /* Maintain aspect ratio */
+    display: block; /* Remove extra space below if it were inline */
+}
+
+#game-title-text {
+    font-family: var(--font-family-monospace);
+    font-size: clamp(28px, 7vw, 50px); /* Responsive font size */
+    font-weight: var(--font-weight-bold); /* Make it bold */
+    color: var(--color-text-base); /* Use base text color */
+    margin: 0; /* Remove default margins */
+}
+
+main {
+    width: 100%; /* Takes width from main */
+    max-width: 500px; /* Cap width on larger screens */
+}
+
+/* Container for the whole game */
+.container {
+    width: 100%; /* Takes width from main */
+    background-color: var(--color-background-container);
+    border-radius: var(--radius-container);
+    box-shadow: 0 0 10px var(--color-shadow-dark-soft); /* Changed from rgba(0, 0, 0, 0.1) */
+    padding: var(--padding-container);
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* Space between sections within container */
+    overflow: visible; /* Ensure it's not unintentionally clipping content */
+}
+
+/* Scores Display Area (formerly .heading) */
+.scores-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* margin-bottom: 16px; removed, using gap in .container */
+}
+
+.scores-container {
+    display: flex;
+    gap: 5px; /* Replaces margin-left on individual boxes */
+    width: 85%; /* Reduced from 100% to make score boxes collectively narrower */
+}
+
+.score-box, .best-box {
+    background-color: var(--color-background-scorebox);
+    color: var(--color-text-score-label);
+    padding: clamp(5px, 2vw, 10px) clamp(8px, 2.5vw, 15px); /* Adjusted horizontal padding */
+    font-size: clamp(12px, 2.5vw, 16px); /* Responsive font size */
+    font-weight: var(--font-weight-bold);
+    border-radius: 3px;
+    text-align: center;
+    /* min-width: 70px; /* Let flexbox handle sizing */
+    font-family: var(--font-family-monospace);
+    flex: 1; /* Allow boxes to grow and shrink equally */
+    /* Add a smaller min-width just to prevent extreme collapse if numbers are very small */
+    min-width: 60px; 
+    /* position: relative; --- Removed, no longer needed for this */
+    /* overflow: visible; --- Removed, no longer needed for this */
+}
+
+.score-box div, .best-box div {
+    color: var(--color-text-score-number);
+    font-size: clamp(16px, 4.5vw, 26px); /* Adjusted font size for score number */
+    line-height: 1.2; /* Adjust line height for clamped font size */
+    font-family: var(--font-family-monospace);
+    white-space: nowrap; /* Prevent wrapping of the score */
+    overflow: hidden;    /* Hide overflow */
+    text-overflow: ellipsis; /* Add ellipsis if score is too long */
+}
+
+#best-score.best-score-glow,
+#score.current-score-glow {
+    text-shadow: 
+        0 0 7px rgba(255, 255, 255, 0.698),   /* Brighter inner white glow */
+        0 0 15px rgb(201, 216, 141),  /* Brighter green glow */
+        0 0 25px rgb(136, 185, 131);  /* Brighter green glow */
+}
+
+/* Game Controls Area (formerly .above-game) */
+.game-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px; /* Replaces margin-left on individual buttons */
+    /* margin-bottom: 10px; removed, using gap in .container */
+}
+
+/* Common Button Styles */
+.restart-button,
+.pause-button,
+.switch-version-button,
+.retry-button {
+    text-decoration: none;
+    font-family: var(--font-family-primary);
+    font-weight: var(--font-weight-bold);
+    font-size: clamp(13px, 2.5vw, 16px); /* Increased font size */
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+    box-shadow: 0 2px 2px rgba(233, 233, 233, 0.608); /* This shadow color could be a variable */
+    border: none; /* Assuming stroke was for SVG, buttons don't usually have CSS stroke */
+                  /* If stroke was meant as border, it should be border property */
+    text-align: center; /* Kept for fallback, but flex overrides */
+    display: flex; /* Added */
+    align-items: center; /* Added for vertical centering */
+    justify-content: center; /* Added for horizontal centering */
+}
+
+.restart-button,
+.pause-button,
+.switch-version-button {
+    padding: var(--padding-button-main);
+    border-radius: var(--radius-button-main);
+}
+
+.retry-button {
+    padding: var(--padding-button-retry);
+    border-radius: var(--radius-button-retry);
+}
+
+.restart-button {
+    background-color: var(--color-button-pause-bg);
+    color: var(--color-text-button-dark);
+    gap: 8px; /* Add gap between icon and text */
+}
+.restart-button:hover {
+    background-color: var(--color-button-pause-hover-bg);
+}
+
+.pause-button {
+    background-color: var(--color-button-pause-bg);
+    color: var(--color-text-button-dark);
+    /* margin-left: 10px; removed, using gap */
+    gap: 8px; /* Add gap between icon and text */
+}
+.pause-button:hover {
+    background-color: var(--color-button-pause-hover-bg);
+}
+
+.switch-version-button {
+    background-color: var(--color-button-switch-bg);
+    color: var(--color-text-button-light);
+    /* margin-left: 10px; removed, using gap */
+}
+.switch-version-button:hover {
+    background-color: var(--color-button-switch-hover-bg);
+}
+
+.retry-button {
+    background-color: var(--color-button-retry-bg);
+    color: var(--color-text-button-light);
+}
+.retry-button:hover {
+    background-color: var(--color-button-retry-hover-bg);
+}
+
+
+/* Game Board Area */
+.game-board-area {
+    /* This section might not need specific styles if .game-container handles everything */
+    flex-shrink: 0; /* Prevent this area from shrinking in the flex column */
+}
+
+.game-container {
+    background-color: var(--color-background-game);
+    border-radius: var(--radius-grid); /* Match grid-container's radius */
+    position: relative;
+    box-shadow: 0 0 10px rgba(163, 163, 163, 0.419) inset;
+    padding: var(--padding-game-container);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%; /* Take full width from parent main */
+    max-width: 450px; /* Max width for the game area, can be adjusted */
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+/* Grid Styling */
+.grid-container {
+    display: grid;
+    /* Calculate cell size based on 100% width of grid-container minus gaps, then divide by 4 */
+    /* This calculation is for the grid-template-columns. JS will read the computed value of --size-grid-cell */
+    grid-template-columns: repeat(4, calc((100% - (3 * var(--gap-grid))) / 4));
+    grid-template-rows: repeat(4, calc((100% - (3 * var(--gap-grid))) / 4));
+    /*AspectRatio: 1 ensures the grid container (and thus cells if they use percentages) remains square */
+    aspect-ratio: 1 / 1; 
+    border-radius: var(--radius-grid); 
+    gap: var(--gap-grid);
+    width: 100%; /* Grid container takes full width of game-container's content box */
+    position: relative; 
+    /* JS will read --size-grid-cell for tile creation. We need to update --size-grid-cell based on actual computed size of a grid item */
+}
+
+.grid-cell {
+    /* Background cells fill their CSS Grid track */
+    background-color: var(--color-background-container); /* Was var(--color-background-gridcell) */
+    border-radius: var(--radius-grid); /* Consistent radius, was 12px */
+    border: 3px solid var(--color-border-gridcell);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: clamp(24px, 6vw, 40px); /* Responsive tile/cell font size */
+    font-weight: var(--font-weight-regular);
+    /* Simplified single box shadow for better performance */
+    box-shadow: 0 2px 4px rgba(180, 180, 180, 0.3);
+    font-family: var(--font-family-primary);
+}
+
+/* Tile Styling */
+.tile {
+    /* Use absolute positioning within the CSS Grid container */
+    position: absolute;
+    border-radius: var(--radius-grid); /* Consistent radius */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: var(--font-weight-regular);
+    font-size: clamp(24px, 6vw, 40px); /* Responsive tile/cell font size, matches .grid-cell */
+    color: var(--color-text-tile);
+    font-family: var(--font-family-primary);
+
+    /* Simplified text stroke for better mobile performance */
+    text-shadow: 1px 1px 0 var(--color-border-gridcell), -1px -1px 0 var(--color-border-gridcell), 1px -1px 0 var(--color-border-gridcell), -1px 1px 0 var(--color-border-gridcell);
+    border: 3px solid var(--color-border-gridcell);
+    /* Simplified single box shadow for better performance */
+    box-shadow: 0 2px 4px var(--color-shadow-dark-soft);
+    transition: background-color 0.1s ease-in-out;
+    z-index: 10; /* Ensure tiles appear above background cells */
+}
+
+/* Animation for when a tile merges */
+@keyframes tile-merge-pop {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.15); /* Pop out a bit */
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.tile-just-merged {
+    animation: tile-merge-pop 0.15s ease-in-out; /* Quick animation */
+}
+
+/* Game Over / Win Message Styling */
+/* Game message is now inside .game-container, so its absolute positioning is relative to .game-container */
+.game-message {
+    /* display: none; is handled by JS by adding/removing class or direct style */
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: var(--color-overlay-message);
+    z-index: 100; /* Ensure it's on top of tiles */
+    display: flex; /* Keep flex for centering content */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    /* text-align: center; inherited or handled by align-items */
+}
+
+.game-message p {
+    font-size: clamp(32px, 8vw, 50px); /* Responsive font size, slightly reduced max */
+    font-weight: var(--font-weight-regular);
+    color: var(--color-text-base);
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-family: var(--font-family-primary);
+}
+
+.game-message .lower {
+    display: flex;
+    justify-content: center;
+}
+
+.new-high-score-emphasis {
+    font-weight: var(--font-weight-bold);
+    display: block; /* Ensures the <br> before it effectively creates a new line */
+    margin-top: 8px; /* Adds a little space above it */
+}
+
+/* Game Explanation Footer */
+.game-explanation-footer {
+    /* margin-top: 10px; Removed */
+    background-color: var(--color-background-body);
+    padding: 0 15px; /* Horizontal padding when collapsed */
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden; 
+    transition: max-height 0.25s ease-in-out, opacity 0.25s ease-in-out, padding-top 0.25s ease-in-out, padding-bottom 0.25s ease-in-out;
+    border-top: 1px solid var(--color-background-scorebox); 
+    position: relative; /* For the new close button */
+}
+
+.game-explanation-footer.open {
+    /* Desktop & non-fullscreen mobile open state */
+    max-height: 500px; 
+    opacity: 1;
+    padding-top: 15px;    /* Restored */
+    padding-bottom: 20px;  /* Restored */
+    padding-left: 25px;   /* Restored */
+    padding-right: 25px;  /* Restored */
+    overflow-y: auto; 
+}
+
+.game-explanation {
+    font-size: 0.9em; /* Slightly smaller for balance */
+    color: var(--color-text-base);
+    line-height: 1.6;
+    text-align: left; /* Left align for readability */
+    font-family: var(--font-family-monospace); /* Changed to monospace */
+    margin-top: 15px; /* Added to create space below the header */
+    /* If there's any specific max-width desired for this block, add it here */
+}
+
+.game-explanation ul {
+    list-style: none; /* Ensure default bullets are hidden */
+    padding-left: 0;  /* Remove default ul padding */
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.game-explanation strong {
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-base); /* Was var(--color-text-important) */
+}
+
+.game-explanation li {
+    margin-top: 0;
+    margin-bottom: 0.75em; /* Spacing between list items */
+}
+
+.game-explanation li:last-child {
+    margin-bottom: 0;
+}
+
+/* Collapsible Drawer Styles */
+.collapsible-drawer {
+    margin-top: 20px;
+    width: 100%;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-container);
+    overflow: hidden; /* For desktop max-height transition of footer */
+    position: relative; /* For containing button/footer, and to stay in flow */
+}
+
+.instructions-toggle-button {
+    background-color: var(--color-background-container);
+    color: var(--color-text-base);
+    font-family: var(--font-family-monospace); /* Changed to monospace */
+    font-weight: var(--font-weight-bold);
+    font-size: 1em;
+    padding: 10px 10px;
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between; /* Reverted to space-between */
+    align-items: center;
+    /* gap: 8px; Removed */
+    border-bottom: 1px solid transparent; /* For separation when open */
+    transition: background-color 0.1s ease; /* For hover effect */
+}
+
+.instructions-toggle-button .toggle-button-label {
+    /* text-align: left; is default for span within flex, or can be explicit */
+    line-height: 1; /* Match arrow's base line-height */
+    padding-top: 5px; /* Match arrow's vertical padding */
+    padding-bottom: 5px; /* Match arrow's vertical padding */
+}
+
+.instructions-toggle-button .arrow {
+    font-weight: var(--font-weight-bold); /* Ensure bold */
+    padding: 5px 8px; /* Add some padding to make it more button-like */
+    border-radius: var(--radius-button-main); /* Use existing button radius */
+    background-color: var(--color-background-scorebox); /* Subtle background, slightly darker gray */
+    color: var(--color-text-base); /* Match text color */
+    line-height: 1; /* Ensure consistency */
+    transition: background-color 0.1s ease; /* For hover effect */
+}
+
+.instructions-toggle-button .arrow:hover {
+    background-color: var(--color-button-pause-hover-bg); /* A light gray, similar to pause button hover */
+    /* Or, if you want it like the emoji button's hover (which is very light): */
+    /* background-color: var(--color-text-button-light); */
+    /* color: var(--color-text-title); /* Ensure contrast if background becomes very light */
+}
+
+
+/* NEW: Mobile Instructions Modal Mode */
+body.instructions-modal-mode-active .collapsible-drawer {
+    /* This drawer becomes the overlay */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-overlay-backdrop);
+    z-index: 1999; /* Below color palette modal, above other content */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Resetting styles that might conflict from its normal state */
+    border: none;
+    border-radius: 0;
+    margin-top: 0;
+    overflow: hidden; /* Overlay should not scroll */
+}
+
+body.instructions-modal-mode-active .instructions-toggle-button {
+    display: none; /* Hide the original toggle button when modal is active */
+}
+
+body.instructions-modal-mode-active .game-explanation-footer {
+    /* This becomes the modal content box */
+    display: block; /* Ensure it is visible */
+    opacity: 1;
+    background-color: var(--color-background-container); /* Like .modal-content */
+    padding-bottom: 20px;
+    border-radius: var(--radius-container);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative; /* Stays relative for flow, overlay handles centering */
+    width: auto;
+    min-width: 320px; /* Added for consistency */
+    max-width: min(500px, calc(100vw - 40px)); /* Consistent max-width */
+    max-height: calc(100vh - 40px); /* Consistent max-height */
+    overflow-y: auto; /* Allow content to scroll */
+    /* Reset transitions that might conflict with modal appearance */
+    transition: none;
+    border-top: none; /* Remove the border from normal drawer mode */
+}
+
+/* New header for instructions modal (mobile only) */
+.game-explanation-footer > .modal-header {
+    display: none; /* Hidden by default (on desktop) */
+}
+body.instructions-modal-mode-active .game-explanation-footer > .modal-header {
+    display: flex; /* Visible in mobile modal mode */
+    /* It will pick up general .modal-header styles for padding, border */
+}
+
+/* Style for the new close button inside instructions modal */
+#close-instructions-modal-btn {
+    display: none; /* Hidden by default (for desktop) */
+    /* General .modal-close-button styles will apply for positioning when visible */
+}
+
+/* Ensure it is visible and clickable when in mobile modal mode */
+body.instructions-modal-mode-active .game-explanation-footer #close-instructions-modal-btn {
+    display: block;
+}
+
+/* Palette Button (general game-button styles should apply) */
+.palette-toggle-button {
+    padding: var(--padding-button-main);
+    border-radius: var(--radius-button-main);
+    color: var(--color-text-button-light);
+    font-size: 1.2em; /* Make emoji slightly larger */
+    line-height: 1; /* Adjust for emoji vertical alignment if needed */
+    border: none;
+    cursor: pointer;
+    text-align: center; /* Kept for fallback */
+    display: flex; /* Added */
+    align-items: center; /* Added for vertical centering */
+    justify-content: center; /* Added for horizontal centering */
+}
+
+.palette-toggle-button:hover {
+    background-color: var(--color-text-button-light);
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--color-overlay-backdrop);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2500;
+}
+
+/* Modal Content (shared for all modals) */
+.modal-content {
+    background-color: var(--color-background-container);
+    border-radius: var(--radius-container);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    /* min-width: 320px; /* Can be removed if width is percentage based */
+    /* max-width: 95vw; /* Will be overridden for settings modal */
+    /* width: 100%; /* Will be overridden for settings modal */
+    max-height: 95vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+/* Specific width for settings modal */
+#settings-modal .modal-content {
+    width: 90vw; /* 90% of viewport width */
+    max-width: calc(500px * 0.9); /* 90% of main game container max-width */
+    min-width: 280px; /* Ensure a reasonable minimum width */
+}
+
+/* Settings Modal Title - Ensure this is the largest */
+#settings-modal .modal-header .modal-title-text {
+    font-family: var(--font-family-monospace);
+    font-weight: var(--font-weight-bold);
+    font-size: var(--settings-modal-title-font-size); /* Use custom property */
+    color: var(--color-text-base);
+    margin: 0;
+}
+
+/* Modal Header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.modal-title-text {
+    font-family: var(--font-family-monospace);
+    font-weight: var(--font-weight-bold);
+    font-size: 1.2em; /* General modal title size */
+    color: var(--color-text-base);
+    margin: 0;
+}
+
+.modal-close-button {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: var(--color-text-base);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-button-main);
+    transition: background 0.1s, color 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.modal-close-button:hover {
+    background: var(--color-button-pause-hover-bg);
+    color: var(--color-text-modal-close-hover);
+}
+
+/* Modal Body */
+.modal-body {
+    padding: 24px;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    /* align-items: center; /* Re-evaluate if this is needed, content is now left-aligned mostly */
+    /* justify-content: center; /* Re-evaluate if this is needed */
+}
+
+/* Modal Footer (for buttons) */
+.modal-footer {
+    display: flex;
+    justify-content: flex-start; /* Align button group to the left */
+    flex-direction: row; /* Ensures HTML order: Save, then Cancel */
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px 24px 24px 24px; /* Consistent with modal-body for alignment */
+    border-top: none; 
+}
+
+/* Ensure game-buttons in modal footer pick up common styles */
+.modal-footer .game-button {
+    padding: var(--padding-button-main); /* Use common button padding */
+    font-size: clamp(11px, 2vw, 13px); /* Use common button font size */
+    font-weight: var(--font-weight-bold);
+    border-radius: var(--radius-button-main);
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+    box-shadow: 0 2px 2px rgba(233, 233, 233, 0.608);
+    border: none;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* flex: 1; Removed to make buttons hug text */
+    /* max-width: 150px; Removed to make buttons hug text */
+}
+
+/* Primary button style (Save Settings) */
+.modal-footer .game-button:not(.secondary) {
+    background-color: var(--color-button-switch-bg); /* Green like "Color Mode" button */
+    color: var(--color-text-button-light);
+}
+.modal-footer .game-button:not(.secondary):hover {
+    background-color: var(--color-button-switch-hover-bg);
+}
+
+/* Secondary button style (Cancel) */
+.game-button.secondary {
+    background-color: var(--color-background-scorebox); /* Grey like score boxes */
+    color: var(--color-text-base);
+}
+
+.game-button.secondary:hover {
+    background-color: #C0C0C0; /* Slightly darker gray for secondary button hover */
+}
+
+/* Instructions content in modal */
+.modal-body .game-explanation {
+    text-align: left;
+    font-family: var(--font-family-monospace);
+    font-size: 1em;
+    color: var(--color-text-base);
+    width: 100%;
+    max-width: 480px;
+}
+.modal-body .game-explanation h4 {
+    font-family: var(--font-family-monospace);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-base);
+    font-size: 1.1em;
+    margin-top: 24px;
+    margin-bottom: 0.2em;
+    text-align: center;
+}
+.modal-body .game-explanation h4:first-child {
+    margin-top: 0;
+}
+.modal-body .game-explanation strong {
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-base);
+}
+
+/* Palette grid in modal */
+.palette-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 80px);
+    grid-template-rows: repeat(2, 80px);
+    gap: 15px;
+    justify-content: center;
+    align-content: center;
+    width: 190px;
+    height: 190px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+.palette-swatch {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-button-main);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border: 2px solid var(--color-border-gridcell);
+    box-shadow: 0 2px 4px var(--color-shadow-dark-soft);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.palette-swatch:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+.palette-swatch .hex-code {
+    background-color: var(--color-overlay-text-backdrop);
+    color: var(--color-text-tile);
+    font-size: 0.8em;
+    padding: 3px 5px;
+    border-radius: 3px;
+    margin-top: 5px;
+    font-family: var(--font-family-monospace);
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        min-width: 0;
+        max-width: 98vw;
+        padding: 0;
+    }
+    .modal-header, .modal-footer {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    .modal-body {
+        padding: 12px;
+    }
+    .palette-grid {
+        width: 100%;
+        height: auto;
+        grid-template-columns: repeat(2, 1fr);
+        grid-width: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .palette-swatch {
+        min-width: 0;
+        min-height: 0;
+    }
+}
+
+/* Notification Area */
+#notification-container {
+    position: fixed;
+    bottom: 0; /* Changed from top: 0 */
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end; /* Changed from flex-start */
+    z-index: 1000;
+    pointer-events: none;
+}
+
+#palette-success-message {
+    position: absolute;
+    bottom: 20px; /* Changed from top: 20px */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(40, 40, 40, 0.85);
+    color: #f0f0f0;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-size: 0.9em;
+    font-weight: bold;
+    z-index: 1001;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    display: none;
+}
+
+#palette-success-message.visible {
+    display: block;
+    opacity: 1;
+}
+
+/* New Modal Header Styles */
+.modal-header .modal-title-text {
+    font-family: var(--font-family-monospace);
+    font-weight: var(--font-weight-bold);
+    font-size: 1em;
+    color: var(--color-text-base);
+    margin: 0;
+}
+
+/* Updated general .modal-close-button - ensure this is placed before the more specific .modal-header .modal-close-button */
+.modal-close-button {
+    position: absolute;
+    top: 15px; 
+    right: 10px; 
+    background: none;
+    border: none;
+    font-size: 1.8em;
+    color: var(--color-text-base);
+    cursor: pointer;
+    padding: 5px; 
+    line-height: 1; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    transition: color 0.1s ease;
+}
+
+.modal-close-button:hover {
+    color: var(--color-text-modal-close-hover); 
+}
+
+/* Style for close buttons within modal headers, to look like arrow buttons */
+.modal-header .modal-close-button {
+    position: static;
+    font-size: 1em;
+    font-weight: var(--font-weight-bold);
+    padding: 5px 8px;
+    border-radius: var(--radius-button-main);
+    background-color: var(--color-background-scorebox);
+    color: var(--color-text-base);
+    line-height: 1;
+    transition: background-color 0.1s ease, color 0.1s ease;
+    border: none;
+}
+
+.modal-header .modal-close-button:hover {
+    background-color: var(--color-button-pause-hover-bg);
+    color: var(--color-text-base);
+}
+/* End New Modal Header Styles */
+
+/* Rules for Instructions Modal Mobile Header */
+.game-explanation-footer > .modal-header {
+    display: none;
+}
+
+body.instructions-modal-mode-active .game-explanation-footer > .modal-header {
+    display: flex;
+}
+/* End Rules for Instructions Modal Mobile Header */
+
+.button-icon {
+    width: clamp(14px, 2.5vw, 16px);
+    height: clamp(14px, 2.5vw, 16px);
+    vertical-align: middle;
+    object-fit: contain;
+}
+
+/* Viewport-Fixed Settings Button */
+.viewport-settings-button {
+    position: fixed;
+    top: 15px;
+    right: calc(max(var(--padding-container), calc((100vw - 500px) / 2)) + 10px);
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    cursor: pointer;
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.viewport-settings-button img {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.viewport-settings-button:hover,
+.viewport-settings-button:focus {
+    opacity: 1;
+    outline: none;
+}
+
+/* Settings Modal Specific Styles */
+.settings-section {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.settings-section:last-of-type {
+    margin-bottom: 0;
+}
+
+.settings-section h4 {
+    font-family: var(--font-family-monospace);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-base);
+    font-size: clamp(calc(var(--settings-modal-title-font-size) * 0.85), 2.5vw, calc(var(--settings-modal-title-font-size) * 0.9));
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding-bottom: 8px;
+}
+
+.setting-option {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    gap: 8px;
+}
+
+.setting-option input[type="radio"] {
+    margin-top: 3px;
+    accent-color: var(--color-button-switch-bg);
+    flex-shrink: 0;
+}
+
+.setting-option label {
+    font-family: var(--font-family-primary);
+    color: var(--color-text-base);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.setting-label-text {
+    font-weight: var(--font-weight-bold);
+    font-size: clamp(calc(var(--settings-modal-title-font-size) * 0.8), 2.2vw, calc(var(--settings-modal-title-font-size) * 0.85));
+    margin-bottom: 2px;
+    text-align: left;
+}
+
+.setting-description {
+    font-family: var(--font-family-primary);
+    font-size: clamp(calc(var(--settings-modal-title-font-size) * 0.75), 2vw, calc(var(--settings-modal-title-font-size) * 0.8));
+    color: var(--color-text-score-label);
+    margin: 0;
+    line-height: 1.3;
+    text-align: left;
+}
+
+.settings-divider {
+    border: none;
+    border-top: 1px solid var(--color-border-subtle);
+    margin: 20px 0;
+}
+
+#settings-color-palette-grid.palette-grid {
+    margin-top: 10px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.game-button.secondary {
+    background-color: var(--color-background-scorebox);
+    color: var(--color-text-base);
+}
+
+.game-button.secondary:hover {
+    background-color: #C0C0C0; /* Slightly darker gray for secondary button hover */
+}
+
+/* Old emoji animation styles removed */
+
+.beta-pill {
+    font-family: var(--font-family-monospace);
+    font-size: 12px;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-base);
+    background-color: var(--color-background-scorebox);
+    padding: 4px 8px;
+    border-radius: 25px;
+    margin-left: 4px; /* Space between title and pill */
+    line-height: 1; /* Ensure consistent vertical alignment */
+    text-transform: uppercase;
+}
+
+#color-picker-input {
+    opacity: 0;
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+}
