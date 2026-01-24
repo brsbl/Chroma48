@@ -1,0 +1,61 @@
+/* Tailwind CSS v4 Entry Point */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+/* Import Tailwind */
+@import "tailwindcss";
+
+/* Theme configuration */
+@theme {
+  /* Colors - Base palette (consolidated) */
+  --color-body: #faf8ef;
+  --color-container: #e8e8e8;
+  --color-game: #fbf7f4;
+  --color-scorebox: #d7d7d7;
+
+  /* Text colors */
+  --color-text-base: #696762;
+  --color-text-score-label: #a19987;
+  --color-text-tile: #ffffff;
+  --color-text-button-light: #f9f6f2;
+  --color-text-button-dark: #979797;
+
+  /* Button colors */
+  --color-btn-restart: #F67B7B;
+  --color-btn-restart-hover: #f77171;
+  --color-btn-pause: #E2E2E2;
+  --color-btn-pause-hover: #D4D4D4;
+  --color-btn-switch: #64D18C;
+  --color-btn-switch-hover: #45d078;
+  --color-btn-retry: #8f7a66;
+  --color-btn-retry-hover: #9f8b77;
+
+  /* Borders */
+  --color-border-grid: #e8e8e8;
+  --color-border-subtle: #dbdbdb;
+
+  /* Overlays */
+  --color-overlay-message: rgba(245, 238, 232, 0.73);
+  --color-overlay-backdrop: rgba(0, 0, 0, 0.6);
+  --color-overlay-text-backdrop: rgba(0, 0, 0, 0.5);
+
+  /* Shadows */
+  --color-shadow-dark-soft: rgba(0, 0, 0, 0.1);
+
+  /* Border radius */
+  --radius-sm: 3px;
+  --radius-default: 6px;
+  --radius-lg: 12px;
+
+  /* Max widths */
+  --max-width-game: 500px;
+  --max-width-game-board: 450px;
+}
+
+/* Source directive for content scanning */
+@source "../app/**/*.html";
+@source "../src/**/*.js";
+
+/* Import custom CSS modules */
+@import './base.css';
+@import './components.css';
+@import './game.css';

@@ -1,0 +1,107 @@
+/* Base styles and CSS variables for dynamic/clamp values */
+
+:root {
+  /* Fonts - preserved for backwards compatibility */
+  --font-family-primary: 'Inter', sans-serif;
+  --font-family-monospace: monospace;
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+
+  /* Dynamic sizing with clamp() */
+  --padding-container: clamp(10px, 3vw, 20px);
+  --padding-button-main: clamp(6px, 1.5vw, 9px) clamp(12px, 2.5vw, 18px);
+  --padding-button-retry: clamp(3px, 0.8vw, 5px) clamp(6px, 1.5vw, 10px);
+
+  /* Grid sizing - JS controlled */
+  --gap-grid: 10px;
+  --padding-game-container: 10px;
+  --size-grid-cell: 65px;
+
+  /* Responsive font sizes with clamp() */
+  --font-size-title: clamp(28px, 7vw, 50px);
+  --font-size-button: clamp(13px, 2.5vw, 16px);
+  --font-size-score-label: clamp(12px, 2.5vw, 16px);
+  --font-size-score-number: clamp(16px, 4.5vw, 26px);
+  --font-size-tile: clamp(24px, 6vw, 40px);
+  --font-size-message: clamp(32px, 8vw, 50px);
+
+  /* Border radii */
+  --radius-container: 6px;
+  --radius-button-main: 5px;
+  --radius-button-retry: 2px;
+  --radius-grid: 12px;
+
+  /* Settings Modal Font Sizes */
+  --settings-modal-title-font-size: 1em;
+
+  /* Text stroke */
+  --tile-text-stroke-width: 1px;
+
+  /* Colors - maintained for backwards compatibility with JS */
+  --color-background-body: #faf8ef;
+  --color-background-container: #e8e8e8;
+  --color-background-game: #fbf7f4;
+  --color-background-scorebox: #d7d7d7;
+  --color-text-base: #696762;
+  --color-text-score-label: #a19987;
+  --color-text-score-number: #ffffff;
+  --color-text-button-light: #f9f6f2;
+  --color-text-button-dark: #979797;
+  --color-text-tile: #ffffff;
+  --color-text-modal-close-hover: #7b7365;
+  --color-button-restart-bg: #F67B7B;
+  --color-button-restart-hover-bg: #f77171;
+  --color-button-pause-bg: #E2E2E2;
+  --color-button-pause-hover-bg: #D4D4D4;
+  --color-button-switch-bg: #64D18C;
+  --color-button-switch-hover-bg: #45d078;
+  --color-button-retry-bg: #8f7a66;
+  --color-button-retry-hover-bg: #9f8b77;
+  --color-border-gridcell: rgb(232, 232, 232);
+  --color-border-subtle: #dbdbdb;
+  --color-tile-text-stroke: #333333;
+  --color-overlay-message: rgba(245, 238, 232, 0.73);
+  --color-overlay-backdrop: rgba(0, 0, 0, 0.6);
+  --color-overlay-text-backdrop: rgba(0, 0, 0, 0.5);
+  --color-shadow-dark-soft: rgba(0, 0, 0, 0.1);
+}
+
+/* Global Reset and Box Sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family-primary);
+  font-weight: var(--font-weight-regular);
+  background-color: var(--color-background-body);
+  color: var(--color-text-base);
+  margin: 0;
+  padding: var(--padding-container);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 100vh;
+  text-align: center;
+}
+
+header {
+  margin-bottom: clamp(15px, 4vh, 20px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: max-content;
+}
+
+main {
+  width: 100%;
+  max-width: 500px;
+}

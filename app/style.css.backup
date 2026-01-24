@@ -60,8 +60,8 @@ html {
     --padding-button-main: clamp(6px, 1.5vw, 9px) clamp(12px, 2.5vw, 18px); /* Increased padding */
     --padding-button-retry: clamp(3px, 0.8vw, 5px) clamp(6px, 1.5vw, 10px);
     --radius-container: 6px;
-    --radius-button-main: 8px;
-    --radius-button-retry: 4px;
+    --radius-button-main: 5px;
+    --radius-button-retry: 2px;
     --radius-grid: 12px;
     --gap-grid: 10px; /* Reduced gap slightly for smaller screens */
     --padding-game-container: 10px; /* Padding around the grid container */
@@ -160,7 +160,7 @@ main {
     padding: clamp(5px, 2vw, 10px) clamp(8px, 2.5vw, 15px); /* Adjusted horizontal padding */
     font-size: clamp(12px, 2.5vw, 16px); /* Responsive font size */
     font-weight: var(--font-weight-bold);
-    border-radius: 8px;
+    border-radius: 3px;
     text-align: center;
     /* min-width: 70px; /* Let flexbox handle sizing */
     font-family: var(--font-family-monospace);
@@ -183,9 +183,10 @@ main {
 
 #best-score.best-score-glow,
 #score.current-score-glow {
-    text-shadow:
-        0 0 4px rgba(255, 255, 255, 0.5),   /* White glow */
-        0 0 8px rgba(180, 180, 180, 0.4);   /* Light grey glow */
+    text-shadow: 
+        0 0 7px rgba(255, 255, 255, 0.698),   /* Brighter inner white glow */
+        0 0 15px rgb(201, 216, 141),  /* Brighter green glow */
+        0 0 25px rgb(136, 185, 131);  /* Brighter green glow */
 }
 
 /* Game Controls Area (formerly .above-game) */
@@ -202,9 +203,9 @@ main {
 .switch-version-button,
 .retry-button {
     text-decoration: none;
-    font-family: var(--font-family-monospace);
+    font-family: var(--font-family-primary);
     font-weight: var(--font-weight-bold);
-    font-size: clamp(11px, 2vw, 13px); /* Smaller font */
+    font-size: clamp(13px, 2.5vw, 16px); /* Increased font size */
     cursor: pointer;
     transition: background-color 0.1s ease;
     box-shadow: 0 2px 2px rgba(233, 233, 233, 0.608); /* This shadow color could be a variable */
@@ -376,12 +377,12 @@ main {
 }
 
 .game-message p {
-    font-size: clamp(24px, 6vw, 36px); /* Reduced size */
-    font-weight: var(--font-weight-bold);
+    font-size: clamp(32px, 8vw, 50px); /* Responsive font size, slightly reduced max */
+    font-weight: var(--font-weight-regular);
     color: var(--color-text-base);
     margin-top: 0;
     margin-bottom: 20px;
-    font-family: var(--font-family-monospace);
+    font-family: var(--font-family-primary);
 }
 
 .game-message .lower {
@@ -714,11 +715,11 @@ body.instructions-modal-mode-active .game-explanation-footer #close-instructions
 
 /* Primary button style (Save Settings) */
 .modal-footer .game-button:not(.secondary) {
-    background-color: var(--color-background-scorebox);
-    color: var(--color-text-base);
+    background-color: var(--color-button-switch-bg); /* Green like "Color Mode" button */
+    color: var(--color-text-button-light);
 }
 .modal-footer .game-button:not(.secondary):hover {
-    background-color: var(--color-button-pause-hover-bg);
+    background-color: var(--color-button-switch-hover-bg);
 }
 
 /* Secondary button style (Cancel) */
@@ -970,7 +971,7 @@ body.instructions-modal-mode-active .game-explanation-footer > .modal-header {
     font-family: var(--font-family-monospace);
     font-weight: var(--font-weight-bold);
     color: var(--color-text-base);
-    font-size: clamp(calc(var(--settings-modal-title-font-size) * 0.7), 2vw, calc(var(--settings-modal-title-font-size) * 0.75));
+    font-size: clamp(calc(var(--settings-modal-title-font-size) * 0.85), 2.5vw, calc(var(--settings-modal-title-font-size) * 0.9));
     margin-top: 0;
     margin-bottom: 15px;
     text-align: left;

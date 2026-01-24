@@ -1,0 +1,121 @@
+/* Game-specific styles: grid, tiles, animations */
+
+/* Game Board Area */
+.game-board-area {
+  flex-shrink: 0;
+}
+
+.game-container {
+  background-color: var(--color-background-game);
+  border-radius: var(--radius-grid);
+  padding: var(--padding-game-container);
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 450px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  box-shadow: 0 0 10px rgba(163, 163, 163, 0.419) inset;
+}
+
+/* Grid Styling */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(4, calc((100% - (3 * var(--gap-grid))) / 4));
+  grid-template-rows: repeat(4, calc((100% - (3 * var(--gap-grid))) / 4));
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-grid);
+  gap: var(--gap-grid);
+  width: 100%;
+  position: relative;
+}
+
+.grid-cell {
+  background-color: var(--color-background-container);
+  border-radius: var(--radius-grid);
+  border: 3px solid var(--color-border-gridcell);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: var(--font-size-tile);
+  font-weight: var(--font-weight-regular);
+  font-family: var(--font-family-primary);
+  box-shadow: 0 2px 4px rgba(180, 180, 180, 0.3);
+}
+
+/* Tile Styling */
+.tile {
+  position: absolute;
+  border-radius: var(--radius-grid);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-tile);
+  color: var(--color-text-tile);
+  font-family: var(--font-family-primary);
+  text-shadow:
+    1px 1px 0 var(--color-border-gridcell),
+    -1px -1px 0 var(--color-border-gridcell),
+    1px -1px 0 var(--color-border-gridcell),
+    -1px 1px 0 var(--color-border-gridcell);
+  border: 3px solid var(--color-border-gridcell);
+  box-shadow: 0 2px 4px var(--color-shadow-dark-soft);
+  transition: background-color 0.1s ease-in-out;
+  z-index: 10;
+}
+
+/* Tile merge animation */
+@keyframes tile-merge-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.tile-just-merged {
+  animation: tile-merge-pop 0.15s ease-in-out;
+}
+
+/* Game Over / Win Message */
+.game-message {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: var(--color-overlay-message);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.game-message p {
+  font-size: var(--font-size-message);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-base);
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-family: var(--font-family-primary);
+}
+
+.game-message .lower {
+  display: flex;
+  justify-content: center;
+}
+
+.new-high-score-emphasis {
+  font-weight: var(--font-weight-bold);
+  display: block;
+  margin-top: 8px;
+}
