@@ -124,11 +124,14 @@ export function saveSettings(options = {}) {
     options.onSetupGame();
   }
 
-  // Show success message
+  // Show success message with CSS transition
   if (paletteSuccessMessage) {
     paletteSuccessMessage.textContent = 'Settings saved successfully!';
     paletteSuccessMessage.style.display = 'block';
+    // Add visible class for opacity transition
+    paletteSuccessMessage.classList.add('visible');
     setTimeout(() => {
+      paletteSuccessMessage.classList.remove('visible');
       paletteSuccessMessage.style.display = 'none';
     }, 3000);
   }
