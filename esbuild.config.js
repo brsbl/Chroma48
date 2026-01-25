@@ -4,7 +4,7 @@ const isDev = process.argv.includes('--dev');
 
 esbuild.build({
   entryPoints: ['src/index.js'],
-  outfile: 'dist/bundle.js',
+  outfile: 'app/bundle.js',
   bundle: true,
   format: 'iife',
   globalName: 'Chroma48',
