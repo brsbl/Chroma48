@@ -1,9 +1,0 @@
-[build]
-  command = ""
-  publish = "app/"
-
-[build.environment]
-  NODE_VERSION = "18"
-
-[context.production.environment]
-  NODE_ENV = "production"
