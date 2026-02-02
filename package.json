@@ -15,8 +15,8 @@
     "watch:css": "postcss src/styles/main.css -o app/style.css --watch",
     "watch": "node esbuild.config.js --dev"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["game", "puzzle", "2048", "browser-game"],
+  "author": "brsbl",
   "license": "MIT",
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",

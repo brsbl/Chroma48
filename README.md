@@ -29,3 +29,7 @@ npm test         # Run tests
 - Vanilla JS with ES modules
 - esbuild for bundling
 - Jest for testing
+
+## Contributing
+
+Found a bug or have a feature request? [Open an issue](https://github.com/brsbl/Chroma48/issues).
