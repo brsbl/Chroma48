@@ -99,7 +99,7 @@ export function moveAndMergeTiles(direction) {
     }
 
     // Compact and merge
-    let workingLine = originalLine.filter(cell => cell !== null);
+    const workingLine = originalLine.filter(cell => cell !== null);
     if (isReverse) workingLine.reverse();
 
     // Merge adjacent tiles

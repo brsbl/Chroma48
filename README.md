@@ -22,10 +22,17 @@ npm install
 npm run watch    # Dev mode with auto-rebuild
 npm run build    # Production build
 npm test         # Run tests
+npm run lint     # Lint code
 ```
 
 ## Tech
 
 - Vanilla JS with ES modules
+- Tailwind CSS for styling
 - esbuild for bundling
 - Jest for testing
+- ESLint for linting
+
+## Contributing
+
+Found a bug or have a feature request? [Open an issue](https://github.com/brsbl/Chroma48/issues).

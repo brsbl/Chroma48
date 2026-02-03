@@ -8,7 +8,7 @@
  */
 
 import gameState, { getDOMElements } from '../state/gameState.js';
-import { updateScore, updateBestScore } from './scoring.js';
+import { updateScore } from './scoring.js';
 
 // =============================================================================
 // FORWARD DECLARATIONS
