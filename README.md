@@ -5,8 +5,7 @@ A puzzle game that blends 2048 mechanics with falling tiles. Merge matching tile
 www.chroma48.com/
 
 ## Play
-
-<img width="605" height="1080" alt="Screenshot 2026-02-02 at 11 05 07 PM" src="https://github.com/user-attachments/assets/eafbdbb9-294b-43e6-8bd4-982220858110" />
+<img width="951" height="916" alt="Screenshot 2026-02-02 at 11 07 33 PM" src="https://github.com/user-attachments/assets/0ce0d4f9-2b0e-41ba-90a1-71f4bf985cc1" />
 
 **Controls:**
 - Arrow keys or swipe to move tiles
