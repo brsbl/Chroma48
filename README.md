@@ -2,9 +2,11 @@
 
 A puzzle game that blends 2048 mechanics with falling tiles. Merge matching tiles to score points before the board fills up.
 
+www.chroma48.com/
+
 ## Play
 
-Open `app/index.html` in your browser.
+<img width="605" height="1080" alt="Screenshot 2026-02-02 at 11 05 07 PM" src="https://github.com/user-attachments/assets/eafbdbb9-294b-43e6-8bd4-982220858110" />
 
 **Controls:**
 - Arrow keys or swipe to move tiles
