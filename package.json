@@ -12,11 +12,11 @@
     "lint:fix": "eslint src/ tests/ --fix",
     "test": "jest",
     "build:css": "postcss src/styles/main.css -o app/style.css",
-    "build:js": "node esbuild.config.js",
+    "build:js": "node esbuild.config.cjs",
     "build": "npm run build:css && npm run build:js",
-    "build:dev": "npm run build:css && node esbuild.config.js --dev",
+    "build:dev": "npm run build:css && node esbuild.config.cjs --dev",
     "watch:css": "postcss src/styles/main.css -o app/style.css --watch",
-    "watch": "node esbuild.config.js --dev"
+    "watch": "node esbuild.config.cjs --dev"
   },
   "keywords": [
     "game",
