@@ -149,9 +149,9 @@ export function ensureTileElement(tileData, row, col) {
     gameState.setTileDOMElement(row, col, tileDOM);
   }
 
-  // Update tile properties
-  tileDOM.className = 'tile'; // Reset classes
-  tileDOM.classList.add(`tile-${tileData.value > 2048 ? 'super' : tileData.value}`);
+  // Update value class
+  const valueClass = `tile-${tileData.value > 2048 ? 'super' : tileData.value}`;
+  tileDOM.className = `tile ${valueClass}`;
 
   const isColorMode = gameState.getIsColorMode();
   tileDOM.textContent = isColorMode ? '' : tileData.value;
@@ -169,16 +169,6 @@ export function ensureTileElement(tileData, row, col) {
     tileDOM.style.height = firstCell.offsetHeight + 'px';
   }
 
-  // Handle merge animation
-  if (tileData.isNewlyMerged) {
-    tileDOM.classList.add('tile-just-merged');
-    setTimeout(() => {
-      if (tileDOM?.parentNode?.contains(tileDOM)) {
-        tileDOM.classList.remove('tile-just-merged');
-      }
-      delete tileData.isNewlyMerged;
-    }, 150);
-  }
 
   return tileDOM;
 }
