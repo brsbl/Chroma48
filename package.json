@@ -1,12 +1,15 @@
 {
   "name": "chroma48",
   "version": "1.0.0",
+  "type": "module",
   "description": "A 2048 Tetris-like game called Chroma48",
   "main": "script.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix",
     "test": "jest",
     "build:css": "postcss src/styles/main.css -o app/style.css",
     "build:js": "node esbuild.config.js",
@@ -15,13 +18,21 @@
     "watch:css": "postcss src/styles/main.css -o app/style.css --watch",
     "watch": "node esbuild.config.js --dev"
   },
-  "keywords": ["game", "puzzle", "2048", "browser-game"],
+  "keywords": [
+    "game",
+    "puzzle",
+    "2048",
+    "browser-game"
+  ],
   "author": "brsbl",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@tailwindcss/postcss": "^4.1.18",
     "autoprefixer": "^10.4.23",
     "esbuild": "^0.27.2",
+    "eslint": "^9.39.2",
+    "globals": "^17.3.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8.5.6",

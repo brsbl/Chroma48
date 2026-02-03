@@ -496,7 +496,7 @@ describe('spawnNewFallingTile and gameLoop', () => {
 
         test('should call handleGameOver if board becomes full after landing', () => {
             const GRID_S = game.getGameState().GRID_SIZE || 4;
-            let nearlyFullGrid = Array(GRID_S).fill(null).map(() => Array(GRID_S).fill(null).map(() => ({value: 8, color: 'grey'})));
+            const nearlyFullGrid = Array(GRID_S).fill(null).map(() => Array(GRID_S).fill(null).map(() => ({value: 8, color: 'grey'})));
             nearlyFullGrid[GRID_S - 2][0] = null; 
             nearlyFullGrid[GRID_S - 1][0] = null; 
             

@@ -1091,7 +1091,7 @@ describe('Game Initialization and localStorage', () => {
         getItemSpy.mockReturnValue('12345'); // Use mockReturnValue for persistent mock during this test
 
         // Simulate DOMContentLoaded relevant part for bestScore loading
-        let initialBestScore = window.localStorage.getItem('bestScore') ? parseInt(window.localStorage.getItem('bestScore')) : 0;
+        const initialBestScore = window.localStorage.getItem('bestScore') ? parseInt(window.localStorage.getItem('bestScore')) : 0;
         game._resetModuleState({ bestScore: initialBestScore }); // Sets module bestScore to 12345
         
         // Call setupGame, which uses the already set module bestScore
@@ -1107,7 +1107,7 @@ describe('Game Initialization and localStorage', () => {
         getItemSpy.mockReturnValue(null); // Use mockReturnValue for persistent mock
 
         // Simulate DOMContentLoaded relevant part for bestScore loading
-        let initialBestScore = window.localStorage.getItem('bestScore') ? parseInt(window.localStorage.getItem('bestScore')) : 0;
+        const initialBestScore = window.localStorage.getItem('bestScore') ? parseInt(window.localStorage.getItem('bestScore')) : 0;
         game._resetModuleState({ bestScore: initialBestScore }); // Sets module bestScore to 0
 
         game.setupGame();
